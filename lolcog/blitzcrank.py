@@ -22,7 +22,7 @@ class Blitzcrank:
 
     async def _get_api_key(self):
         if not self.api:
-            db = await self.bot.get_shared_api_tokens("riot")
+            db = await self.bot.get_shared_api_tokens("league")
             self.api = db['api_key']
             return self.api
         else:
@@ -39,4 +39,7 @@ class Blitzcrank:
         apistr = await self.apistring()
         request = self.url.format(self.regions[region]) + "/lol/summoner/v4/summoners/by-name/{}".format(name) + apistr
         js = await self.get(request)
-        return js["puuid"]
+    
+    def cog_unload(self):
+        self.bot.loop.create_task(self.session.close())
+    
