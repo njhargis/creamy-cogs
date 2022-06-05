@@ -19,7 +19,7 @@ class LeagueCog(commands.Cog):
         "puuid": "",
         "summoner_id": "",
         "account_id": "",
-        "region": "NA"
+        "region": ""
     }
 
     def __init__(self, bot: Red):
