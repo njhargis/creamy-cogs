@@ -1,5 +1,9 @@
+from redbot.core import Config
 class Blitzcrank:
-    # This class is responsible for grabbing and pulling data from Riot API.
+    # "The time of man has come to an end."
+    # This class is responsible for:
+    #   1) handling the token for Riot API.
+    #   2) grabbing and pulling data from Riot API.
 
     def __init__(self, bot):
         self.url = "https://{}.api.riotgames.com"
@@ -19,8 +23,9 @@ class Blitzcrank:
             "ru": "ru",
             "pbe": "pbe1"
         }
+        self.config = Config.get_conf(self, 8945225427)
 
-    async def _get_api_key(self):
+    async def get_league_api_key(self):
         if not self.api:
             db = await self.bot.get_shared_api_tokens("league")
             self.api = db['api_key']
@@ -29,16 +34,17 @@ class Blitzcrank:
             return self.api
 
     async def apistring(self):
-        apikey = await self._get_api_key()
+        apikey = await self.get_league_api_key()
         if apikey is None:
             return False
         else:
             return "?api_key={}".format(apikey)
 
-    async def get_summoner_puuid(self, name, region):
+    async def get_summoner_puuid(self, name, region : str):
         apistr = await self.apistring()
         request = self.url.format(self.regions[region]) + "/lol/summoner/v4/summoners/by-name/{}".format(name) + apistr
         js = await self.get(request)
+        return js["puuid"]
     
     def cog_unload(self):
         self.bot.loop.create_task(self.session.close())

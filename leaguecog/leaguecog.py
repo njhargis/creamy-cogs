@@ -1,6 +1,8 @@
 import discord
 from redbot.core import commands, Config, bank, errors, checks
-#from .blitzcrank import Blitzcrank
+from redbot.core.bot import Red
+from .blitzcrank import Blitzcrank
+from .leaguedata import AccountInfo
 
 class LeagueCog(commands.Cog):
     """Interact with the League of Legends API to find out information about summoners,
@@ -8,16 +10,20 @@ class LeagueCog(commands.Cog):
     """
 
     default_guild_settings = {
-        "LIVE_SUMMONERS": {},
-        "REGION": "NA"
+        "REGION": "NA",
+        "LIVE_SUMMONERS": [],
+        "REGISTERED_SUMMONERS": [],
     }
 
     default_member_settings = {
-        "summoner": "",
+        "summoner_name": "",
+        "puuid": "",
+        "summoner_id": "",
+        "account_id": ""
     }
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, bot: Red):
+        self.bot: Red = bot
         self.config = Config.get_conf(self, 8945225427)
         self.config.register_guild(**self.default_guild_settings)
         self.config.register_member(**self.default_member_settings)
@@ -34,26 +40,32 @@ class LeagueCog(commands.Cog):
         """
         if member is None:
             member = ctx.author
-
-        name = await self.config.member(member).summoner()
-
-        if name:
+            name = await self.config.member(member).summoner()
             await ctx.send(
-                ("That user's summoner name is {summoner_name}.").format(
+                ("Your summoner name is {summoner_name}.").format(
                     summoner_name = name
                 )
             )
+
         else:
-            await ctx.send(
-                ("That user does not have a summoner name setup yet.")
-            )
+            name = await self.config.member(member).summoner()
+            if name:
+                await ctx.send(
+                    ("That user's summoner name is {summoner_name}.").format(
+                        summoner_name = name
+                    )
+                )
+            else:
+                await ctx.send(
+                    ("That user does not have a summoner name setup yet.")
+                )
 
     @commands.group()
     async def leagueset(self, ctx: commands.Context):
         """Base command to manage League settings"""
 
     @leagueset.command(name="summoner")
-    async def set_summoner(self, ctx: commands.Context, *, name: str = ""):
+    async def set_summoner(self, ctx: commands.Context, region: str = None, *, name: str = ""):
         """This sets your summoner name to your account
         
         You must have a summoner name set to call !lol commands.
@@ -61,6 +73,10 @@ class LeagueCog(commands.Cog):
         author = ctx.author
 
         name = name.strip()
+
+        # See if summoner name exists, grab account credentials.
+        if not region:
+            region = await self.config.REGION
 
         await self.config.member(author).summoner.set(name)
 
