@@ -61,11 +61,13 @@ class Blitzcrank:
 
     async def get_summoner_info(self, ctx, name, region):
         message = await ctx.send(f"Attempting to register you as {name} in {region}...")
+        region = self.regions[region.lower()]
         apiAuth = await self.apistring()
         await asyncio.sleep(3)
+        
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                f"https://{region.lower()}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{name}/{apiAuth}"
+                f"https://{region}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{name}/{apiAuth}"
             ) as req:
                 try:
                     data = await req.json()
