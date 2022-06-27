@@ -1,8 +1,9 @@
-from urllib.parse import urlencode
-from redbot.core import Config
-import aiohttp
 import asyncio
+
+import aiohttp
 import discord
+from redbot.core import Config
+
 
 class Blitzcrank:
     # "The time of man has come to an end."
@@ -17,7 +18,6 @@ class Blitzcrank:
 
     def __init__(self, bot):
 
-        self.url = "https://{}.api.riotgames.com"
         self.api = None
         self.bot = bot
         self.regions = {
@@ -32,18 +32,18 @@ class Blitzcrank:
             "oce": "oc1",
             "tr": "tr1",
             "ru": "ru",
-            "pbe": "pbe1"
+            "pbe": "pbe1",
         }
         self.config = Config.get_conf(self, 8945225427)
-    
+
     async def __unload(self):
         asyncio.get_event_loop().create_task(self._session.close())
-    
+
     # [p]set api league api_key
     async def get_league_api_key(self):
         if not self.api:
             db = await self.bot.get_shared_api_tokens("league")
-            self.api = db['api_key']
+            self.api = db["api_key"]
             return self.api
         else:
             return self.api
@@ -53,38 +53,35 @@ class Blitzcrank:
         if apikey is None:
             return False
         else:
-            return "?api_key={}".format(apikey)
+            return f"?api_key={apikey}"
 
     async def get(self, url):
         async with self._session.get(url) as response:
             return await response.json()
 
     async def get_summoner_info(self, ctx, name, region):
-        message = await ctx.send(
-            ("Attempting to register you as {smn_name} in {reg}...").format(
-                smn_name = name,
-                reg = region
-            )
-        )
+        message = await ctx.send(f"Attempting to register you as {name} in {region}...")
         apiAuth = await self.apistring()
         await asyncio.sleep(3)
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                self.url.format(self.regions[region.lower()]) + "/lol/summoner/v4/summoners/by-name/{}".format(name) + apiAuth
+                f"https://{region.lower()}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{name}/{apiAuth}"
             ) as req:
                 try:
                     data = await req.json()
                 except aiohttp.ContentTypeError:
                     data = {}
-                
+
                 if req.status == 200:
                     currTitle = "Registration Success"
                     currType = "apiSuccess"
-                    currMsg = "Summoner now registered.\n **Summoner Name**: {smnName}\n **PUUID**: {pid}\n **AccountId**: {acctId}\n **SummonerId**: {smnId}".format(
-                        smnName = name,
-                        pid = data["puuid"],
-                        acctId = data["accountId"],
-                        smnId = data["id"]
+                    pid, acctId, smnId = data["puuid"], data["accountId"], data["id"]
+                    currMsg = (
+                        f"Summoner now registered.\n"
+                        f"**Summoner Name**: {name}\n"
+                        f"**PUUID**: {pid}\n"
+                        f"**AccountId**: {acctId}\n"
+                        f"**SummonerId**: {smnId}"
                     )
 
                 else:
@@ -95,21 +92,23 @@ class Blitzcrank:
                     elif req.status == 401:
                         currMsg = "Your Riot API token is invalid or expired."
                     else:
-                        currMsg = ("Riot API request failed with status code {statusCode}").format(
-                            statusCode = req.status
+                        currMsg = (
+                            f"Riot API request failed with status code {req.status}"
                         )
-                    
-                embed = await self.build_embed(title = currTitle, msg = currMsg, type = currType)
+
+                embed = await self.build_embed(
+                    title=currTitle, msg=currMsg, _type=currType
+                )
                 await message.edit(content=ctx.author.mention, embed=embed)
 
-    async def build_embed(self, title, msg, type):
+    async def build_embed(self, title, msg, _type):
         embed = discord.Embed()
 
         if title:
             embed.title = title
         else:
             embed.title = "League of Legends Cog"
-        
+
         # If this is passed an embed, update fields
         # Otherwise just insert the string.
         if isinstance(msg, discord.Embed):
@@ -119,13 +118,13 @@ class Blitzcrank:
             embed.description = msg
 
         # Handle types with various standard colors and messages.
-        if type == "apiSuccess":
+        if _type == "apiSuccess":
             embed.color = 0x00FF00
-        elif type == "apiFail":
+        elif _type == "apiFail":
             embed.color = 0xFF0000
-            end = ("Sorry, something went wrong!")
-            embed.add_field(name="-" * 65, value = end)
+            end = "Sorry, something went wrong!"
+            embed.add_field(name="-" * 65, value=end)
         else:
             embed.color = 0x808080
-        
+
         return embed
