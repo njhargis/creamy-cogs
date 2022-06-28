@@ -71,6 +71,9 @@ class LeagueCog(commands.Cog):
         Names with spaces must be enclosed in "quotes." Region is optional.
         If you don't pass a region, it will use your currently assigned region.
         If you don't have a currently assigned region, it will use the default for the guild.
+
+        Example:
+            [p]leagueset summoner your_summoner_name NA
         """
         author = ctx.author
         name = name.strip()
