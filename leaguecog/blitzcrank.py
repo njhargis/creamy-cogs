@@ -1,17 +1,14 @@
 import asyncio
 import logging
-
 import aiohttp
 import discord
 from redbot.core import Config
 
+from leaguecog.abc import MixinMeta
 
-### DEBUG ###
-log = logging.getLogger("red.creamy-cogs.leaguecog")
-logging.disable(logging.CRITICAL)
+log = logging.getLogger("red.creamy.cogs.league")
 
-
-class Blitzcrank:
+class Blitzcrank(MixinMeta):
     # "The time of man has come to an end."
     # This class is responsible for:
     #   1) handling the token for Riot API.
@@ -19,25 +16,14 @@ class Blitzcrank:
     # To-Do:
     #   Move all standard API call logic into one function to call
     #   Warn user with instructions on how to set API key if it is invalid.
-
-    def __init__(self, bot):
-        self.api = None
-        self.bot = bot
-        self.regions = {
-            "br": "br1",
-            "eune": "eun1",
-            "euw": "euw1",
-            "jp": "jp1",
-            "kr": "kr",
-            "lan": "la1",
-            "las": "la2",
-            "na": "na1",
-            "oce": "oc1",
-            "tr": "tr1",
-            "ru": "ru",
-            "pbe": "pbe1",
-        }
-        self.config = Config.get_conf(self, 8945225427)
+    #   Handle edge case of no-space, 2+ word names, no region inputted.
+    #   Check if token is valid before kicking off loop polling
+    #   Warning if no alert channel is set
+    #   Check to see if economy is turned on, and require it
+    #   Let user tell you a match is finished
+    #   Register other user's for them.
+    #   When registering users, don't allow double register of summoner id.
+    #   Move chatter code to a separate class
 
     async def __unload(self):
         asyncio.get_event_loop().create_task(self._session.close())
@@ -64,6 +50,9 @@ class Blitzcrank:
         else:
             return f"?api_key={apikey}"
 
+    # This needs to move out of this class.
+    # Possible chatter class? Who talks too much in League?
+    # This class should be strictly for hitting Riot API.
     async def build_embed(self, title, msg, _type):
         embed = discord.Embed()
 
@@ -102,12 +91,11 @@ class Blitzcrank:
         async with self._session.get(url) as response:
             return await response.json()
 
-    async def get_summoner_info(self, ctx, name, region):
+    async def get_summoner_info(self, ctx, name, member, region):
         message = await ctx.send(
             f"Attempting to register you as '{name}' in {region.upper()}..."
         )
         apiAuth = await self.apistring()
-        await asyncio.sleep(3)
 
         try:
             region = self.regions[region.lower()]
@@ -125,7 +113,7 @@ class Blitzcrank:
         else:
             async with aiohttp.ClientSession() as session:
                 # build the url as an f-string, can double-check 'name' in the console
-                url = f"https://{region}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{name}/{apiAuth}"
+                url = f"https://{region}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{name}/{apiAuth}".format()
                 log.info(f"url == {url}")
 
                 async with session.get(url) as req:
@@ -135,6 +123,7 @@ class Blitzcrank:
                         data = {}
 
                     if req.status == 200:
+                        log.debug("200")
                         currTitle = "Registration Success"
                         currType = "apiSuccess"
                         pid, acctId, smnId = (
@@ -149,8 +138,21 @@ class Blitzcrank:
                             f"**AccountId**: {acctId}\n"
                             f"**SummonerId**: {smnId}"
                         )
+                        # See if DB Exists first
+                        # IDK this is kinda messed up.
+                        #if await self.config.guild(ctx.guild).registered_summoners():
+                        async with self.config.guild(ctx.guild).registered_summoners() as reg_smn:
+                            # Need to check if this summoner Id is already in the list
+                            reg_smn.append({"smnId": data["id"], "region": region.lower()})
+                        await self.config.member(member).summoner_name.set(name)
+                        await self.config.member(member).puuid.set(data["puuid"])
+                        await self.config.member(member).account_id.set(data["accountId"])
+                        await self.config.member(member).summoner_id.set(data["id"])
+                        await self.config.member(member).region.set(region.lower())
+                        log.debug("Registered in db")
 
                     else:
+                        log.debug("Not 200")
                         currTitle = "Registration Failure"
                         currType = "apiFail"
                         if req.status == 404:
@@ -163,5 +165,62 @@ class Blitzcrank:
                             )
 
         finally:
+            log.debug("Finally")
             embed = await self.build_embed(title=currTitle, msg=currMsg, _type=currType)
             await message.edit(content=ctx.author.mention, embed=embed)
+
+    async def check_games(self):
+        # Need to handle if channel is null or list of registered summoners is null
+        # Currently bombs out if either are null
+         # Find alert channel
+        channelId = await self.config.alertChannel()
+        channel = self.bot.get_channel(channelId)
+        log.debug(f"Found channel {channel}")
+        # Loop through registered summoners
+        async with self.config.guild(channel.guild).registered_summoners() as registered_summoners:
+            for summoner in registered_summoners:
+                # Skip blank records
+                if summoner != {}:
+                    smn = summoner["smnId"]
+                    region = summoner["region"]
+                    log.debug(f"Seeing if summoner: {smn} is in a game in region {region}...")                       
+                    apiAuth = await self.apistring()
+                    url = f"https://{region}.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{smn}/{apiAuth}"
+                    log.info(f"url == {url}")
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(
+                            url
+                        ) as req:
+                            try:
+                                data = await req.json()
+                            except aiohttp.ContentTypeError:
+                                data = {}
+                            if req.status == 200:
+                                # Create a list of combo gameid + smn id to add to current active game list if not in there already.
+                                gameIds = []
+                                log.debug("GameIds")
+                                async with self.config.guild(channel.guild).live_games() as live_games:
+                                   #Need to not post twice when someone is in a game.
+                                   # for active_game in live_games:
+                                     #   if active_game != {}:
+                                     #       log.debug("Creating gameIds")
+                                     #       gameIds.append(str(active_game["gameId"]) + str(active_game["smnId"]))
+                                   # if str(data["gameId"]) + str(data["smnId"]) not in gameIds:
+                                    log.debug("Appending new live game")
+                                    live_games.append({"gameId": data["gameId"], "smnId": summoner["smnId"], "region": summoner["region"], "startTime": data["gameStartTime"]})
+                                    message = await channel.send(
+                                            ("Summoner {smnId} started a game!").format(
+                                                smnId = summoner["smnId"]
+                                            )
+                                        )
+                            else:
+                                if req.status == 404:
+                                    log.debug("Summoner is not currently in a game.")
+                                else:
+                                    # Handle this more graciously
+                                    log.warning = ("Riot API request failed with status code {statusCode}").format(
+                                        statusCode = req.status
+                                    ) 
+                else:
+                    log.debug("Skipped record")
+                    continue
