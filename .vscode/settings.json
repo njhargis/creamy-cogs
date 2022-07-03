@@ -3,12 +3,15 @@
         "aiohttp",
         "apikey",
         "apistring",
+        "creamycogs",
         "eune",
         "gameid",
         "leaguecog",
         "leagueset",
+        "Malarne",
         "njhargis",
         "puuid",
-        "redbot"
+        "redbot",
+        "swagbotbilly"
     ]
 }

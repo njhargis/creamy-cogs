@@ -62,7 +62,6 @@ class LeagueCog(
         self.config.register_role(**self.default_role_settings)
         self.config.register_member(**self.default_member_settings)
         
-        self.leagueUrl = "https://{}.api.riotgames.com"
         self.api = None
         self.regions = {
             "br": "br1",
@@ -97,8 +96,8 @@ class LeagueCog(
     async def cog_before_invoke(self, ctx: commands.Context):
         await self._ready_event.wait()
     
-    # Every X second see if list of summoners are in a game.
     async def _game_alerts(self):
+        """Loops every X seconds to see if list of registered summoners are in a game."""
         await self.bot.wait_until_ready()
         while True:
             log.debug("Checking games")
@@ -107,6 +106,7 @@ class LeagueCog(
             await asyncio.sleep(await self.config.refresh_timer())
 
     def cog_unload(self):
+        """Cancel all pending async tasks when the cog is unloaded."""
         if self.task:
             self.task.cancel()
     
@@ -141,16 +141,16 @@ class LeagueCog(
         """Base command to manage League settings"""
 
     @leagueset.command(name="summoner")
-    async def set_summoner(self, ctx: commands.Context, name: str = "", member: discord.Member = None, region: str = None):
+    async def set_summoner(self, ctx: commands.Context, name: str = "", region: str = None):
         """
-        This sets a summoner name to a Discord account. If you do not pass a Discord account, defaults to author.
-        Names with spaces must be enclosed in "quotes. Region is optional.
+        This sets a summoner name to your Discord account. 
+        Names with spaces must be enclosed in "quotes". Region is optional.
         If you don't pass a region, it will use your currently assigned region.
         If you don't have a currently assigned region, it will use the default for the guild.
 
         Example:
             [p]leagueset summoner your_summoner_name NA
-            [p]leagueset summoner "firstname lastname" @Bird#0000 na
+            [p]leagueset summoner "firstname lastname" 
         """
         if member is None:
             member = ctx.author
@@ -166,12 +166,49 @@ class LeagueCog(
         # See if summoner name exists on that region.
         await self.get_summoner_info(ctx, name, member, region)
 
+    @leagueset.commands(name="other-summoner")
+    async def set_other_summoner(self, ctx: commands.Context, member: discord.Member, name: str = "", region: str = None):
+        """
+        This sets a summoner name to a Discord account. This should be deprecated eventually, but helpful for testing multiple user's.
+        Names with spaces must be enclosed in "quotes". Region is optional.
+        If you don't pass a region, it will use your currently assigned region.
+        If you don't have a currently assigned region, it will use the default for the guild.
+
+        Example:
+            [p]leagueset other-summoner your_summoner_name @Bird#0000 NA
+            [p]leagueset other-summoner "firstname lastname" @Bird#0000 na
+        """
+        name = name.strip()
+        
+        # If they did not pass a region, don't change their region if they have one set.
+        # If they don't have one set, use the guild's default.
+        if not region:
+            region = await self.config.member(member).region()
+            if not region:
+                region = await self.config.guild(ctx.guild).default_region()
+
+        # See if summoner name exists on that region.
+        await self.get_summoner_info(ctx, name, member, region)
+
     @leagueset.command(name="channel")
     async def set_channel(self, ctx: commands.Context):
+        """
+        Call this command in the channel you want announcements for new games in.
+
+        Example:
+            [p]leagueset channel
+        """
         await self.config.alertChannel.set(ctx.channel.id)
         await ctx.send("Channel set.")
 
     @leagueset.command(name="reset")
     async def reset_guild(self, ctx: commands.Context):
+        """
+        This clears out the database for the cog.
+        Should be deprecated, for development use only.
+
+        Example:
+            [p]leagueset reset
+        """
         await self.config.clear_all()
         await ctx.send("Data cleared.")
