@@ -1,8 +1,14 @@
 import asyncio
+import logging
 
 import aiohttp
 import discord
 from redbot.core import Config
+
+
+### DEBUG ###
+log = logging.getLogger("red.creamy-cogs.leaguecog")
+logging.disable(logging.CRITICAL)
 
 
 class Blitzcrank:
@@ -13,7 +19,6 @@ class Blitzcrank:
     # To-Do:
     #   Move all standard API call logic into one function to call
     #   Warn user with instructions on how to set API key if it is invalid.
-    #   Catch and warn if they try to input summoner with space, no quotes.
 
     def __init__(self, bot):
         self.api = None
@@ -108,17 +113,22 @@ class Blitzcrank:
             region = self.regions[region.lower()]
 
         except KeyError:
+            # raise a KeyError for bad region, pass title, type, and message to build_embed()
+            #    and send the author a formatted list of available regions
             currTitle = "Invalid Region"
             currType = "invalidRegion"
-            currMsg = f"Region {region.upper()} not found. Available regions:\n" + ", ".join(
-                [r.upper() for r in self.regions.keys()]
+            currMsg = (
+                f"Region {region.upper()} not found. Available regions:\n"
+                + ", ".join([r.upper() for r in self.regions.keys()])
             )
 
         else:
             async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"https://{region}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{name}/{apiAuth}"
-                ) as req:
+                # build the url as an f-string, can double-check 'name' in the console
+                url = f"https://{region}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{name}/{apiAuth}"
+                log.info(f"url == {url}")
+
+                async with session.get(url) as req:
                     try:
                         data = await req.json()
                     except aiohttp.ContentTypeError:
