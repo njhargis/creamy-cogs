@@ -15,6 +15,12 @@ class Blitzcrank(MixinMeta):
     #   2) grabbing and pulling data from Riot API.
     # To-Do:
     #   Move all standard API call logic into one function to call
+    #   First install instructions
+    #       1) Set API Key
+    #       2) Let user decide if they want announcement
+    #       2a) If yes, set announcement channel
+    #       3) Let user decide if they want betting
+    #       4) If yes and economy is turned off, tell them how to turn it on.
     #   Warn user with instructions on how to set API key if it is invalid.
     #   Handle edge case of no-space, 2+ word names, no region inputted.
     #   Check if token is valid before kicking off loop polling
@@ -24,6 +30,7 @@ class Blitzcrank(MixinMeta):
     #   Register other user's for them.
     #   When registering users, don't allow double register of summoner id.
     #   Move chatter code to a separate class
+    #   Instead of looping through registered summoners could we just loop through members with account info?
 
     async def __unload(self):
         asyncio.get_event_loop().create_task(self._session.close())
@@ -138,9 +145,6 @@ class Blitzcrank(MixinMeta):
                             f"**AccountId**: {acctId}\n"
                             f"**SummonerId**: {smnId}"
                         )
-                        # See if DB Exists first
-                        # IDK this is kinda messed up.
-                        #if await self.config.guild(ctx.guild).registered_summoners():
                         async with self.config.guild(ctx.guild).registered_summoners() as reg_smn:
                             # Need to check if this summoner Id is already in the list
                             reg_smn.append({"smnId": data["id"], "region": region.lower()})
@@ -149,10 +153,8 @@ class Blitzcrank(MixinMeta):
                         await self.config.member(member).account_id.set(data["accountId"])
                         await self.config.member(member).summoner_id.set(data["id"])
                         await self.config.member(member).region.set(region.lower())
-                        log.debug("Registered in db")
 
                     else:
-                        log.debug("Not 200")
                         currTitle = "Registration Failure"
                         currType = "apiFail"
                         if req.status == 404:
@@ -165,14 +167,12 @@ class Blitzcrank(MixinMeta):
                             )
 
         finally:
-            log.debug("Finally")
             embed = await self.build_embed(title=currTitle, msg=currMsg, _type=currType)
             await message.edit(content=ctx.author.mention, embed=embed)
 
     async def check_games(self):
-        # Need to handle if channel is null or list of registered summoners is null
-        # Currently bombs out if either are null
-         # Find alert channel
+        # Find alert channel
+        # Handle no channel set up.
         channelId = await self.config.alertChannel()
         channel = self.bot.get_channel(channelId)
         log.debug(f"Found channel {channel}")
@@ -186,7 +186,7 @@ class Blitzcrank(MixinMeta):
                     log.debug(f"Seeing if summoner: {smn} is in a game in region {region}...")                       
                     apiAuth = await self.apistring()
                     url = f"https://{region}.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{smn}/{apiAuth}"
-                    log.info(f"url == {url}")
+                    log.debug(f"url == {url}")
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
                             url
