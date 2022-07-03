@@ -13,24 +13,6 @@ class Blitzcrank(MixinMeta):
     # This class is responsible for:
     #   1) handling the token for Riot API.
     #   2) grabbing and pulling data from Riot API.
-    # To-Do:
-    #   Move all standard API call logic into one function to call
-    #   First install instructions
-    #       1) Set API Key
-    #       2) Let user decide if they want announcement
-    #       2a) If yes, set announcement channel
-    #       3) Let user decide if they want betting
-    #       4) If yes and economy is turned off, tell them how to turn it on.
-    #   Warn user with instructions on how to set API key if it is invalid.
-    #   Handle edge case of no-space, 2+ word names, no region inputted.
-    #   Check if token is valid before kicking off loop polling
-    #   Warning if no alert channel is set
-    #   Check to see if economy is turned on, and require it
-    #   Let user tell you a match is finished
-    #   Register other user's for them.
-    #   When registering users, don't allow double register of summoner id.
-    #   Move chatter code to a separate class
-    #   Instead of looping through registered summoners could we just loop through members with account info?
 
     async def __unload(self):
         asyncio.get_event_loop().create_task(self._session.close())
