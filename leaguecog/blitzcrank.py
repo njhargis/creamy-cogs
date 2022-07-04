@@ -130,6 +130,7 @@ class Blitzcrank(MixinMeta):
             await message.edit(content=ctx.author.mention, embed=embed)
 
     async def check_games(self):
+        # We should not run this every call, should do this more standard place.
         await self.update_version()
         # Find alert channel
         # Handle no channel set up.
@@ -165,7 +166,7 @@ class Blitzcrank(MixinMeta):
                                     # Need to not post twice when someone is in a game.
                                         for active_game in live_games:
                                             if active_game != {}:
-                                                if (str(active_game["gameId"]) + str(active_game["smnId"])) == (str(data["gameId"]) + str(data["gameId"])):
+                                                if (str(active_game["gameId"]) + str(active_game["smnId"])) == (str(data["gameId"]) + str(smn)):
                                                     alreadyTracked = True
                                         log.debug("Done checking vs list of tracked games.")
                                         if not alreadyTracked:
@@ -174,12 +175,8 @@ class Blitzcrank(MixinMeta):
                                             for participant in data["participants"]:
                                                 if participant["summonerId"] == smn:
                                                     thisSmnInfo = participant
-                                            log.debug(thisSmnInfo)
                                             live_games.append({"gameId": data["gameId"], "smnId": summoner["smnId"], "region": summoner["region"], "startTime": data["gameStartTime"], "teamId": thisSmnInfo["teamId"], "active": True})                                
-                                            # I think there's a better way to do this.
-                                            log.debug("Appended.")
                                             champs = self.champlist["data"]
-                                            #log.debug(champs)
                                             for i in champs:
                                                 loopChamp = champs[i]
                                                 if str(loopChamp["key"]) == str(thisSmnInfo["championId"]):
@@ -190,6 +187,8 @@ class Blitzcrank(MixinMeta):
                                                         postChampName = champName
                                                     )
                                                 )
+                                        else:
+                                            log.debug("We are already tracking this game.")
                             else:
                                 if req.status == 404:
                                     log.debug("Summoner is not currently in a game.")
