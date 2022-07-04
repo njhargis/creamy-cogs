@@ -35,8 +35,10 @@ class LeagueCog(
     """
 
     default_global_settings = {
+        # We should dynamically calculate this based on registered summoners to not hit throttle limit.
         "refresh_timer": 30,
         "notified_owner_missing_league_key": False,
+        "poll_games": True,
     }
 
     default_guild_settings = {
@@ -93,8 +95,12 @@ class LeagueCog(
         """Should be called straight after cog instantiation."""
         await self.bot.wait_until_ready()
         try:
-            log.debug("Attempting to start loop..")
-            self.task = self.bot.loop.create_task(self._game_alerts())
+            log.debug("Updating Riot API Version...")
+            # We need to run this more often, but not sure when.
+            await self.update_version()
+            if await self.config.poll_games():
+                log.debug("Attempting to start loop..")
+                self.task = self.bot.loop.create_task(self._game_alerts())
         except Exception as error:
             log.exception("Failed to initialize League cog:", exc_info=error)
 
@@ -121,11 +127,29 @@ class LeagueCog(
     async def league(self, ctx: commands.Context):
         """Base command to interact with the League Cog."""
 
+    @league.command(name="setup")
+    async def setup_cog(self, ctx: commands.Context):
+        """
+        Returns a user's summoner name.
+        If you do not enter a username, returns your own.
+        """
+        # Set if they want to poll live games.
+        # Set guild region
+        # Set announcement channel
+        # Setup Riot API key and request a permanent one.
+        # Might be helpful example: https://github.com/Cog-Creators/Red-DiscordBot/blob/V3/develop/redbot/cogs/streams/streams.py#L122
+        # You also could bot.send_to_owners if self.api is not set.
+        return
+
     @league.command(name="summoner")
     async def get_summoner(self, ctx: commands.Context, member: discord.Member = None):
         """
         Returns a user's summoner name.
         If you do not enter a username, returns your own.
+
+        Example:
+            [p]league summoner @Bird#0000
+            [p]league summoner
         """
         self = False
         if member is None:
