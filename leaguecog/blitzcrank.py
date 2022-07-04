@@ -4,7 +4,7 @@ import aiohttp
 import discord
 from redbot.core import Config
 
-from leaguecog.abc import MixinMeta
+from leaguecog.mixinmeta import MixinMeta
 
 log = logging.getLogger("red.creamy.cogs.league")
 
@@ -130,8 +130,6 @@ class Blitzcrank(MixinMeta):
             await message.edit(content=ctx.author.mention, embed=embed)
 
     async def check_games(self):
-        # We should not run this every call, should do this more standard place.
-        await self.update_version()
         # Find alert channel
         # Handle no channel set up.
         channelId = await self.config.alertChannel()
@@ -160,35 +158,44 @@ class Blitzcrank(MixinMeta):
                             if req.status == 200:
                                 # Only care about games on Summoner's Rift
                                 if data["gameMode"] == "CLASSIC":
-                                    # Use combination of gameid + smn id to add to current active game list if not in there already.
-                                    alreadyTracked = False
-                                    async with self.config.guild(channel.guild).live_games() as live_games:
-                                    # Need to not post twice when someone is in a game.
-                                        for active_game in live_games:
-                                            if active_game != {}:
-                                                if (str(active_game["gameId"]) + str(active_game["smnId"])) == (str(data["gameId"]) + str(smn)):
-                                                    alreadyTracked = True
-                                        log.debug("Done checking vs list of tracked games.")
-                                        if not alreadyTracked:
-                                            log.debug("Appending new live game")
-                                            # We only care about info related to this specific summoner
-                                            for participant in data["participants"]:
-                                                if participant["summonerId"] == smn:
-                                                    thisSmnInfo = participant
-                                            live_games.append({"gameId": data["gameId"], "smnId": summoner["smnId"], "region": summoner["region"], "startTime": data["gameStartTime"], "teamId": thisSmnInfo["teamId"], "active": True})                                
-                                            champs = self.champlist["data"]
-                                            for i in champs:
-                                                loopChamp = champs[i]
-                                                if str(loopChamp["key"]) == str(thisSmnInfo["championId"]):
-                                                    champName = loopChamp["name"]
-                                            message = await channel.send(
-                                                    ("Summoner {smnId} started a game on {postChampName}!").format(
-                                                        smnId = summoner["smnId"],
-                                                        postChampName = champName
+                                    # If it is a custom, only care if 10 non-bots.
+                                    playerCount = 0
+                                    if data["gameType"] == "CUSTOM_GAME":
+                                        for participant in data ["participants"]:
+                                            if participant["bot"] == False:
+                                                playerCount += 1 
+                                    # FOR DEV TESTING IN CUSTOMS 1v0, swap comment out line below.
+                                    # if (data["gameType"] == "MATCHED_GAME") or (data["gameType"] == "CUSTOM_GAME"):
+                                    if (data["gameType"] == "MATCHED_GAME") or (data["gameType"] == "CUSTOM_GAME" and playerCount == 10):
+                                        # Use combination of gameid + smn id to add to current active game list if not in there already.
+                                        alreadyTracked = False
+                                        async with self.config.guild(channel.guild).live_games() as live_games:
+                                        # Need to not post twice when someone is in a game.
+                                            for active_game in live_games:
+                                                if active_game != {}:
+                                                    if (str(active_game["gameId"]) + str(active_game["smnId"])) == (str(data["gameId"]) + str(smn)):
+                                                        alreadyTracked = True
+                                            log.debug("Done checking vs list of tracked games.")
+                                            if not alreadyTracked:
+                                                log.debug("Appending new live game")
+                                                # We only care about info related to this specific summoner
+                                                for participant in data["participants"]:
+                                                    if participant["summonerId"] == smn:
+                                                        thisSmnInfo = participant
+                                                live_games.append({"gameId": data["gameId"], "smnId": summoner["smnId"], "region": summoner["region"], "startTime": data["gameStartTime"], "teamId": thisSmnInfo["teamId"], "active": True})                                
+                                                champs = self.champlist["data"]
+                                                for i in champs:
+                                                    loopChamp = champs[i]
+                                                    if str(loopChamp["key"]) == str(thisSmnInfo["championId"]):
+                                                        champName = loopChamp["name"]
+                                                message = await channel.send(
+                                                        ("Summoner {smnId} started a game on {postChampName}!").format(
+                                                            smnId = summoner["smnId"],
+                                                            postChampName = champName
+                                                        )
                                                     )
-                                                )
-                                        else:
-                                            log.debug("We are already tracking this game.")
+                                            else:
+                                                log.debug("We are already tracking this game.")
                             else:
                                 if req.status == 404:
                                     log.debug("Summoner is not currently in a game.")
