@@ -135,7 +135,6 @@ class Blitzcrank(MixinMeta):
                     smn = summoner["smnId"]
                     region = summoner["region"]
                     log.debug(f"Seeing if summoner: {smn} is in a game in region {region}...")                       
-                    apiAuth = await self.apistring()
                     beginOfPath, endOfPath = await self.get_riot_url(region)
                     url = f"{beginOfPath}spectator/v4/active-games/by-summoner/{smn}/{endOfPath}".format()
                     log.debug(f"url == {url}")
