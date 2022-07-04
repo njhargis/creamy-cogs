@@ -23,27 +23,21 @@ class Blitzcrank(MixinMeta):
         '''
         asyncio.get_event_loop().create_task(self._session.close())
 
-    async def get_league_api_key(self):
+    async def get_riot_url(self, region):
         """
-        Loads the key-value pair 'api_key': <key> for 'league'
-        If no key is assigned, returns None
-
+        Given a region returns a Riot API url.
+        
         ex. set API key for league with:
             [p]set api league api_key <key>
         """
+        # If we've already gotten the API token, don't re-get it from the bot.
         if not self.api:
             db = await self.bot.get_shared_api_tokens("league")
             self.api = db["api_key"]
-            return self.api
-        else:
-            return self.api
-
-    async def apistring(self):
-        apikey = await self.get_league_api_key()
-        if apikey is None:
-            return False
-        else:
-            return f"?api_key={apikey}"
+        
+        endOfPath = f"?api_key={self.api}"
+        beginOfPath = f"https://{region}.api.riotgames.com/lol/"
+        return (beginOfPath, endOfPath)
 
     async def get(self, url):
         async with self._session.get(url) as response:
@@ -58,8 +52,7 @@ class Blitzcrank(MixinMeta):
             message = await ctx.send(
                 f"Attempting to register {member} as '{name}' in {region.upper()}..."
             )
-        asyncio.sleep(3)
-        apiAuth = await self.apistring()
+        await asyncio.sleep(3)
 
         try:
             region = self.regions[region.lower()]
@@ -77,7 +70,8 @@ class Blitzcrank(MixinMeta):
         else:
             async with aiohttp.ClientSession() as session:
                 # build the url as an f-string, can double-check 'name' in the console
-                url = f"https://{region}.api.riotgames.com/lol/summoner/v4/summoners/by-name/{name}/{apiAuth}".format()
+                beginOfPath, endOfPath = await self.get_riot_url(region)
+                url = f"{beginOfPath}summoner/v4/summoners/by-name/{name}/{endOfPath}".format()
                 log.info(f"url == {url}")
 
                 async with session.get(url) as req:
