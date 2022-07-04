@@ -19,7 +19,7 @@ class Ezreal:
     """
     def __init__(self, ctx, title=None, msg=None, _type=None):
         self.ctx = ctx
-        
+
         embed = discord.Embed()
         embed.title = title
         embed.description = msg
@@ -161,10 +161,8 @@ class Blitzcrank(MixinMeta):
                             )
 
         finally:
-            #embed = await self.build_embed(title=currTitle, msg=currMsg, _type=currType)
-            #await message.edit(content=ctx.author.mention, embed=embed)
-            cb = Ezreal(ctx, title=currTitle, msg=currMsg, _type=currType)
-            await cb.send()
+            embed = Ezreal(ctx, title=currTitle, msg=currMsg, _type=currType)
+            embed.send()
 
 
     async def check_games(self):
