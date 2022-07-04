@@ -19,13 +19,14 @@ class Ezreal:
     """
 
     def __init__(self, ctx, title=None, msg=None, _type=None):
+        # pass the parts and construct the embed message on call
         self.ctx = ctx
 
         embed = discord.Embed()
         embed.title = title
         embed.description = msg
 
-        # Handle types with various standard colors and messages
+        # handle types with various standard colors and messages
         GREEN = 0x00FF00
         RED = 0xFF0000
         GRAY = 0x808080
@@ -43,6 +44,8 @@ class Ezreal:
         self.embed = embed
 
     async def send(self):
+        # send the embed message
+        # leaving this as a separate method allows for further processing/changes
         message = await self.ctx.send("TODO Some on-brand message here...")
         await message.edit(content=self.ctx.author.mention, embed=self.embed)
 
