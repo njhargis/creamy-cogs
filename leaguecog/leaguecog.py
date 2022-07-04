@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from typing import Optional
+import aiohttp
 import discord
 from abc import ABC
 from redbot.core import commands, Config
@@ -64,6 +65,10 @@ class LeagueCog(
         self.config.register_role(**self.default_role_settings)
         self.config.register_member(**self.default_member_settings)
         
+        self.champ_api_version = None
+        
+        self._session = aiohttp.ClientSession()
+        self.champlist = None
         self.api = None
         self.regions = {
             "br": "br1",
@@ -215,3 +220,14 @@ class LeagueCog(
         """
         await self.config.clear_all()
         await ctx.send("Data cleared.")
+
+    @leagueset.command(name="update")
+    async def update_version_data(self, ctx: commands.Context):
+        """
+        If League of Legends updates this will get new champion data.
+
+        Example:
+            [p]leagueset update
+        """
+        await self.update_version()
+        await ctx.send("Version patched.")
