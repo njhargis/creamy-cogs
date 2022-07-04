@@ -152,8 +152,7 @@ class LeagueCog(
             [p]leagueset summoner your_summoner_name NA
             [p]leagueset summoner "firstname lastname" 
         """
-        if member is None:
-            member = ctx.author
+        member = ctx.author
         name = name.strip()
         
         # If they did not pass a region, don't change their region if they have one set.
@@ -164,16 +163,16 @@ class LeagueCog(
                 region = await self.config.guild(ctx.guild).default_region()
 
         # See if summoner name exists on that region.
-        await self.get_summoner_info(ctx, name, member, region)
+        await self.get_summoner_info(ctx, name, member, region, True)
 
-    @leagueset.commands(name="other-summoner")
+    @leagueset.command(name="other-summoner")
     async def set_other_summoner(self, ctx: commands.Context, member: discord.Member, name: str = "", region: str = None):
         """
         This sets a summoner name to a Discord account. This should be deprecated eventually, but helpful for testing multiple user's.
         Names with spaces must be enclosed in "quotes". Region is optional.
         If you don't pass a region, it will use your currently assigned region.
         If you don't have a currently assigned region, it will use the default for the guild.
-
+    
         Example:
             [p]leagueset other-summoner your_summoner_name @Bird#0000 NA
             [p]leagueset other-summoner "firstname lastname" @Bird#0000 na
@@ -188,8 +187,9 @@ class LeagueCog(
                 region = await self.config.guild(ctx.guild).default_region()
 
         # See if summoner name exists on that region.
-        await self.get_summoner_info(ctx, name, member, region)
+        await self.get_summoner_info(ctx, name, member, region, False)
 
+    
     @leagueset.command(name="channel")
     async def set_channel(self, ctx: commands.Context):
         """
@@ -200,6 +200,7 @@ class LeagueCog(
         """
         await self.config.alertChannel.set(ctx.channel.id)
         await ctx.send("Channel set.")
+    
 
     @leagueset.command(name="reset")
     async def reset_guild(self, ctx: commands.Context):

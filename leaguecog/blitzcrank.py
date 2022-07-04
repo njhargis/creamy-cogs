@@ -80,10 +80,16 @@ class Blitzcrank(MixinMeta):
         async with self._session.get(url) as response:
             return await response.json()
 
-    async def get_summoner_info(self, ctx, name, member, region):
-        message = await ctx.send(
-            f"Attempting to register you as '{name}' in {region.upper()}..."
-        )
+    async def get_summoner_info(self, ctx, name, member, region, isSelf):
+        if isSelf:
+            message = await ctx.send(
+                f"Attempting to register you as '{name}' in {region.upper()}..."
+            )
+        else:
+            message = await ctx.send(
+                f"Attempting to register {member} as '{name}' in {region.upper()}..."
+            )
+        asyncio.sleep(3)
         apiAuth = await self.apistring()
 
         try:
