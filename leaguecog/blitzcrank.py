@@ -17,13 +17,14 @@ class Ezreal:
 
     This class is reponsible for handling Discord Embed messages.
     """
+
     def __init__(self, ctx, title=None, msg=None, _type=None):
         self.ctx = ctx
 
         embed = discord.Embed()
         embed.title = title
         embed.description = msg
-        
+
         # Handle types with various standard colors and messages
         GREEN = 0x00FF00
         RED = 0xFF0000
@@ -38,25 +39,23 @@ class Ezreal:
             embed.color = RED
         else:
             embed.color = GRAY
-        
+
         self.embed = embed
 
     async def send(self):
         message = await self.ctx.send("TODO Some on-brand message here...")
-        await message.edit(
-            content=self.ctx.author.mention, 
-            embed=self.embed
-        )
+        await message.edit(content=self.ctx.author.mention, embed=self.embed)
 
 
 class Blitzcrank(MixinMeta):
     """
     "The time of man has come to an end."
-    
+
     This class is responsible for:
         1) handling the token for Riot API.
         2) grabbing and pulling data from Riot API.
     """
+
     async def __unload(self):
         asyncio.get_event_loop().create_task(self._session.close())
 
@@ -139,12 +138,18 @@ class Blitzcrank(MixinMeta):
                             f"**AccountId**: {acctId}\n"
                             f"**SummonerId**: {smnId}"
                         )
-                        async with self.config.guild(ctx.guild).registered_summoners() as reg_smn:
+                        async with self.config.guild(
+                            ctx.guild
+                        ).registered_summoners() as reg_smn:
                             # Need to check if this summoner Id is already in the list
-                            reg_smn.append({"smnId": data["id"], "region": region.lower()})
+                            reg_smn.append(
+                                {"smnId": data["id"], "region": region.lower()}
+                            )
                         await self.config.member(member).summoner_name.set(name)
                         await self.config.member(member).puuid.set(data["puuid"])
-                        await self.config.member(member).account_id.set(data["accountId"])
+                        await self.config.member(member).account_id.set(
+                            data["accountId"]
+                        )
                         await self.config.member(member).summoner_id.set(data["id"])
                         await self.config.member(member).region.set(region.lower())
 
@@ -164,7 +169,6 @@ class Blitzcrank(MixinMeta):
             embed = Ezreal(ctx, title=currTitle, msg=currMsg, _type=currType)
             embed.send()
 
-
     async def check_games(self):
         # Find alert channel
         # Handle no channel set up.
@@ -172,20 +176,22 @@ class Blitzcrank(MixinMeta):
         channel = self.bot.get_channel(channelId)
         log.debug(f"Found channel {channel}")
         # Loop through registered summoners
-        async with self.config.guild(channel.guild).registered_summoners() as registered_summoners:
+        async with self.config.guild(
+            channel.guild
+        ).registered_summoners() as registered_summoners:
             for summoner in registered_summoners:
                 # Skip blank records
                 if summoner != {}:
                     smn = summoner["smnId"]
                     region = summoner["region"]
-                    log.debug(f"Seeing if summoner: {smn} is in a game in region {region}...")                       
+                    log.debug(
+                        f"Seeing if summoner: {smn} is in a game in region {region}..."
+                    )
                     apiAuth = await self.apistring()
                     url = f"https://{region}.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/{smn}/{apiAuth}"
                     log.debug(f"url == {url}")
                     async with aiohttp.ClientSession() as session:
-                        async with session.get(
-                            url
-                        ) as req:
+                        async with session.get(url) as req:
                             try:
                                 data = await req.json()
                             except aiohttp.ContentTypeError:
@@ -194,28 +200,37 @@ class Blitzcrank(MixinMeta):
                                 # Create a list of combo gameid + smn id to add to current active game list if not in there already.
                                 gameIds = []
                                 log.debug("GameIds")
-                                async with self.config.guild(channel.guild).live_games() as live_games:
-                                   #Need to not post twice when someone is in a game.
-                                   # for active_game in live_games:
-                                     #   if active_game != {}:
-                                     #       log.debug("Creating gameIds")
-                                     #       gameIds.append(str(active_game["gameId"]) + str(active_game["smnId"]))
-                                   # if str(data["gameId"]) + str(data["smnId"]) not in gameIds:
+                                async with self.config.guild(
+                                    channel.guild
+                                ).live_games() as live_games:
+                                    # Need to not post twice when someone is in a game.
+                                    # for active_game in live_games:
+                                    #   if active_game != {}:
+                                    #       log.debug("Creating gameIds")
+                                    #       gameIds.append(str(active_game["gameId"]) + str(active_game["smnId"]))
+                                    # if str(data["gameId"]) + str(data["smnId"]) not in gameIds:
                                     log.debug("Appending new live game")
-                                    live_games.append({"gameId": data["gameId"], "smnId": summoner["smnId"], "region": summoner["region"], "startTime": data["gameStartTime"]})
+                                    live_games.append(
+                                        {
+                                            "gameId": data["gameId"],
+                                            "smnId": summoner["smnId"],
+                                            "region": summoner["region"],
+                                            "startTime": data["gameStartTime"],
+                                        }
+                                    )
                                     message = await channel.send(
-                                            ("Summoner {smnId} started a game!").format(
-                                                smnId = summoner["smnId"]
-                                            )
+                                        ("Summoner {smnId} started a game!").format(
+                                            smnId=summoner["smnId"]
                                         )
+                                    )
                             else:
                                 if req.status == 404:
                                     log.debug("Summoner is not currently in a game.")
                                 else:
                                     # Handle this more graciously
-                                    log.warning = ("Riot API request failed with status code {statusCode}").format(
-                                        statusCode = req.status
-                                    ) 
+                                    log.warning = (
+                                        "Riot API request failed with status code {statusCode}"
+                                    ).format(statusCode=req.status)
                 else:
                     log.debug("Skipped record")
                     continue
