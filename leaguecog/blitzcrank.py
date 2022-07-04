@@ -137,7 +137,7 @@ class Blitzcrank(MixinMeta):
                     log.debug(f"Seeing if summoner: {smn} is in a game in region {region}...")                       
                     apiAuth = await self.apistring()
                     beginOfPath, endOfPath = await self.get_riot_url(region)
-                    url = f"{beginOfPath}spectator/v4/active-games/by-summoner/{smn}/{name}/{endOfPath}".format()
+                    url = f"{beginOfPath}spectator/v4/active-games/by-summoner/{smn}/{endOfPath}".format()
                     log.debug(f"url == {url}")
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
