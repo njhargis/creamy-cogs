@@ -8,6 +8,7 @@ from redbot.core import commands, Config
 from redbot.core.bot import Red
 
 from .blitzcrank import Blitzcrank
+from .ezreal import Ezreal
 
 
 log = logging.getLogger("red.creamy.cogs.league")
@@ -23,6 +24,7 @@ class CompositeMetaClass(type(commands.Cog), type(ABC)):
 
 class LeagueCog(
     Blitzcrank,
+    Ezreal,
     commands.Cog,
     metaclass=CompositeMetaClass,
     ):

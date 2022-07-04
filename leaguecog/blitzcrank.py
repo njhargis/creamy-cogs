@@ -9,12 +9,18 @@ from leaguecog.abc import MixinMeta
 log = logging.getLogger("red.creamy.cogs.league")
 
 class Blitzcrank(MixinMeta):
-    # "The time of man has come to an end."
-    # This class is responsible for:
-    #   1) handling the token for Riot API.
-    #   2) grabbing and pulling data from Riot API.
+    """
+    'The time of man has come to an end.'
+
+    This class is responsible for:
+       1) handling the token for Riot API.
+       2) grabbing and pulling data from Riot API.
+    """
 
     async def __unload(self):
+        '''
+        Close any sessions that are open if unloading the cog.
+        '''
         asyncio.get_event_loop().create_task(self._session.close())
 
     async def get_league_api_key(self):
@@ -38,43 +44,6 @@ class Blitzcrank(MixinMeta):
             return False
         else:
             return f"?api_key={apikey}"
-
-    # This needs to move out of this class.
-    # Possible chatter class? Who talks too much in League?
-    # This class should be strictly for hitting Riot API.
-    async def build_embed(self, title, msg, _type):
-        embed = discord.Embed()
-
-        if title:
-            embed.title = title
-        else:
-            embed.title = "League of Legends Cog"
-
-        # If this is passed an embed, update fields.
-        #   Otherwise just insert the string.
-        if isinstance(msg, discord.Embed):
-            for field in msg.fields:
-                embed.add_field(**field.__dict__)
-        else:
-            embed.description = msg
-
-        # Handle types with various standard colors and messages
-        GREEN = 0x00FF00
-        RED = 0xFF0000
-        GRAY = 0x808080
-
-        if _type == "apiSuccess":
-            embed.color = GREEN
-        elif _type == "apiFail":
-            embed.color = RED
-            end = "Sorry, something went wrong!"
-            embed.add_field(name="-" * 65, value=end)
-        elif _type == "invalidRegion":
-            embed.color = RED
-        else:
-            embed.color = GRAY
-
-        return embed
 
     async def get(self, url):
         async with self._session.get(url) as response:
