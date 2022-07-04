@@ -3,6 +3,7 @@
         "aiohttp",
         "apikey",
         "apistring",
+        "champlist",
         "creamycogs",
         "eune",
         "gameid",
