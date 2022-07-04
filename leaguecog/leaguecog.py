@@ -38,7 +38,7 @@ class LeagueCog(
         # We should dynamically calculate this based on registered summoners to not hit throttle limit.
         "refresh_timer": 30,
         "notified_owner_missing_league_key": False,
-        "poll_games": True,
+        "poll_games": False,
     }
 
     default_guild_settings = {
@@ -232,6 +232,18 @@ class LeagueCog(
         await self.config.alertChannel.set(ctx.channel.id)
         await ctx.send("Channel set.")
     
+    @leagueset.command(name="enable-matches")
+    async def enable_matches(self, ctx: commands.Context):
+        """
+        Call this command once channel is setup and you are ready for matches to begin polling.
+
+        Example:
+            [p]leagueset enable-matches
+        """
+        await self.config.poll_games.set(True)
+        await ctx.send("Match tracking enabled.")
+        self.task = self.bot.loop.create_task(self._game_alerts())
+
 
     @leagueset.command(name="reset")
     async def reset_guild(self, ctx: commands.Context):

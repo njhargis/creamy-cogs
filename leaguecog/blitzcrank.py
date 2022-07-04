@@ -165,14 +165,16 @@ class Blitzcrank(MixinMeta):
                                             if participant["bot"] == False:
                                                 playerCount += 1 
                                     # FOR DEV TESTING IN CUSTOMS 1v0, swap comment out line below.
-                                    # if (data["gameType"] == "MATCHED_GAME") or (data["gameType"] == "CUSTOM_GAME"):
-                                    if (data["gameType"] == "MATCHED_GAME") or (data["gameType"] == "CUSTOM_GAME" and playerCount == 10):
+                                    if (data["gameType"] == "MATCHED_GAME") or (data["gameType"] == "CUSTOM_GAME"):
+                                    #if (data["gameType"] == "MATCHED_GAME") or (data["gameType"] == "CUSTOM_GAME" and playerCount == 10):
                                         # Use combination of gameid + smn id to add to current active game list if not in there already.
                                         alreadyTracked = False
+                                        #This could be more DRY as it is repeated below.
                                         async with self.config.guild(channel.guild).live_games() as live_games:
                                         # Need to not post twice when someone is in a game.
                                             for active_game in live_games:
-                                                if active_game != {}:
+                                                if active_game != {} and active_game["active"]:
+                                                    log.debug(active_game)
                                                     if (str(active_game["gameId"]) + str(active_game["smnId"])) == (str(data["gameId"]) + str(smn)):
                                                         alreadyTracked = True
                                             log.debug("Done checking vs list of tracked games.")
@@ -182,7 +184,8 @@ class Blitzcrank(MixinMeta):
                                                 for participant in data["participants"]:
                                                     if participant["summonerId"] == smn:
                                                         thisSmnInfo = participant
-                                                live_games.append({"gameId": data["gameId"], "smnId": summoner["smnId"], "region": summoner["region"], "startTime": data["gameStartTime"], "teamId": thisSmnInfo["teamId"], "active": True})                                
+                                                # Need to set old games to inactive before appending a new one.
+                                                live_games.append({(str(data["gameId"]) + str(smn)): {"gameId": data["gameId"], "smnId": smn, "region": region, "startTime": data["gameStartTime"], "teamId": thisSmnInfo["teamId"], "active": True}})                                
                                                 champs = self.champlist["data"]
                                                 for i in champs:
                                                     loopChamp = champs[i]
@@ -199,6 +202,16 @@ class Blitzcrank(MixinMeta):
                             else:
                                 if req.status == 404:
                                     log.debug("Summoner is not currently in a game.")
+                                    async with self.config.guild(channel.guild).live_games() as live_games:
+                                        for active_game in live_games:
+                                            log.debug(active_game)
+                                            if active_game != {}:
+                                                for key, value in active_game.items():
+                                                    if str(value["smnId"]) == str(smn):
+                                                        log.debug("Hit")
+                                                        await self.config.guild(channel.guild).live_games.clear_raw(key)
+                                                        log.debug("Worked?")
+
                                 else:
                                     # Handle this more graciously
                                     log.warning = ("Riot API request failed with status code {statusCode}").format(

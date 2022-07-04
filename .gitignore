@@ -1,4 +1,3 @@
-
-*.pyc
-leaguecog/__pycache__/blitzcrank.cpython-38.pyc
-leaguecog/__pycache__/leaguecog.cpython-38.pyc
+leaguecog/__pycache__/*
+creamycog/__pycache__/*
+*/__pycache__/*
