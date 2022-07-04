@@ -24,7 +24,14 @@ class Ezreal:
 
         embed = discord.Embed()
         embed.title = title
-        embed.description = msg
+
+        # If this is passed an embed, update fields
+        #   Otherwise just insert the string
+        if isinstance(msg, discord.Embed):
+            for field in msg.fields:
+                embed.add_field(**field.__dict__)
+        else:        
+            embed.description = msg
 
         # handle types with various standard colors and messages
         GREEN = 0x00FF00
