@@ -1,3 +1,1 @@
-leaguecog/__pycache__/*
-creamycog/__pycache__/*
-*/__pycache__/*
+*.pyc

@@ -43,7 +43,7 @@ class LeagueCog(
 
     default_guild_settings = {
         "default_region": "NA",
-        "live_games": [{}],
+        "live_games": {},
         "registered_summoners": [{}],
     }
 
