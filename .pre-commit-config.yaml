@@ -10,3 +10,8 @@
         rev: 3.9.2
         hooks:
           - id: flake8
+      - repo: https://github.com/pre-commit/pre-commit-hooks
+        rev: v4.3.0
+        hooks:
+          - id: no-commit-to-branch
+            args: ['--branch', 'V3', '--pattern', '^(((feature|bigfeature|bugfix)\/[A-Z]+-[0-9]+_[A-Z]+_.+))']
