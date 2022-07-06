@@ -10,3 +10,15 @@
         rev: 3.9.2
         hooks:
           - id: flake8
+      - repo: https://github.com/pre-commit/pre-commit-hooks
+        rev: v4.3.0
+        hooks:
+          - id: no-commit-to-branch
+            args: ['--pattern', '^(?!((bugfix|feature)\/[a-zA-Z0-9\-]+)$).*']
+      - repo: local
+        hooks:
+          - id: print-msg
+            name: print-msg
+            language: system
+            entry: echo -e "uses black styling, flake8 linting, and branch name must begin with bugfix/ or feature/\n"
+            verbose: true
