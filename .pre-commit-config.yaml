@@ -15,4 +15,10 @@
         hooks:
           - id: no-commit-to-branch
             args: ['--pattern', '^(?!((bugfix|feature)\/[a-zA-Z0-9\-]+)$).*']
-            entry: bash -c 'echo "branch name must begin with bugfix/ or feature/"'
+      - repo: local
+        hooks:
+          - id: print-msg
+            name: print-msg
+            language: system
+            entry: echo "uses black styling, flake8 linting, and branch name must begin with bugfix/ or feature/"
+            verbose: true
