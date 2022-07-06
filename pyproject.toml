@@ -1,0 +1,13 @@
+[tool.black]
+# 99 as line-length matches Red #
+line-length = 99
+target-version = ['py38']
+include = '\.py$'
+exclude = '''
+/(
+    \.toml
+    |\.sh
+    |\.git
+    |\.ini
+)/
+'''

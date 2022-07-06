@@ -4,6 +4,7 @@ from leaguecog.mixinmeta import MixinMeta
 
 log = logging.getLogger("red.creamy.cogs.league")
 
+
 class Ezreal(MixinMeta):
     """
     'Lot of good mages out there. None of them are this hot!'

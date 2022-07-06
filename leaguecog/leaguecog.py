@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 from typing import Optional
@@ -14,6 +13,7 @@ from .ezreal import Ezreal
 
 log = logging.getLogger("red.creamy.cogs.league")
 
+
 class CompositeMetaClass(type(commands.Cog), type(ABC)):
     """
     This allows the metaclass used for proper type detection to
@@ -28,7 +28,7 @@ class LeagueCog(
     Ezreal,
     commands.Cog,
     metaclass=CompositeMetaClass,
-    ):
+):
     """
     Interact with the League of Legends API to find out information about summoners,
     champions, and to wager on people's matches with economy credits.
@@ -47,9 +47,7 @@ class LeagueCog(
         "registered_summoners": [{}],
     }
 
-    default_role_settings = {
-        "mention": False
-    }
+    default_role_settings = {"mention": False}
 
     default_member_settings = {
         "summoner_name": "",
@@ -66,9 +64,9 @@ class LeagueCog(
         self.config.register_guild(**self.default_guild_settings)
         self.config.register_role(**self.default_role_settings)
         self.config.register_member(**self.default_member_settings)
-        
+
         self.champ_api_version = None
-        
+
         self._session = aiohttp.ClientSession()
         self.champlist = None
         self.api = None
@@ -84,7 +82,7 @@ class LeagueCog(
             "oce": "oc1",
             "tr": "tr1",
             "ru": "ru",
-            "pbe": "pbe1"
+            "pbe": "pbe1",
         }
 
         self.task: Optional[asyncio.Task] = None
@@ -108,7 +106,7 @@ class LeagueCog(
 
     async def cog_before_invoke(self, ctx: commands.Context):
         await self._ready_event.wait()
-    
+
     async def _game_alerts(self):
         """Loops every X seconds to see if list of registered summoners are in a game."""
         await self.bot.wait_until_ready()
@@ -122,7 +120,7 @@ class LeagueCog(
         """Cancel all pending async tasks when the cog is unloaded."""
         if self.task:
             self.task.cancel()
-    
+
     @commands.group()
     async def league(self, ctx: commands.Context):
         """Base command to interact with the League Cog."""
@@ -165,7 +163,6 @@ class LeagueCog(
             await ctx.send(f"That user's summoner name is {name}.")
         else:
             await ctx.send(f"Your summoner name is {name}, located in {region}.")
-                
 
     @commands.group()
     async def leagueset(self, ctx: commands.Context):
@@ -174,18 +171,18 @@ class LeagueCog(
     @leagueset.command(name="summoner")
     async def set_summoner(self, ctx: commands.Context, name: str = "", region: str = None):
         """
-        This sets a summoner name to your Discord account. 
+        This sets a summoner name to your Discord account.
         Names with spaces must be enclosed in "quotes". Region is optional.
         If you don't pass a region, it will use your currently assigned region.
         If you don't have a currently assigned region, it will use the default for the guild.
 
         Example:
             [p]leagueset summoner your_summoner_name NA
-            [p]leagueset summoner "firstname lastname" 
+            [p]leagueset summoner "firstname lastname"
         """
         member = ctx.author
         name = name.strip()
-        
+
         # If they did not pass a region, don't change their region if they have one set.
         # If they don't have one set, use the guild's default.
         if not region:
@@ -197,19 +194,21 @@ class LeagueCog(
         await self.get_summoner_info(ctx, name, member, region, True)
 
     @leagueset.command(name="other-summoner")
-    async def set_other_summoner(self, ctx: commands.Context, member: discord.Member, name: str = "", region: str = None):
+    async def set_other_summoner(
+        self, ctx: commands.Context, member: discord.Member, name: str = "", region: str = None
+    ):
         """
         This sets a summoner name to a Discord account. This should be deprecated eventually, but helpful for testing multiple user's.
         Names with spaces must be enclosed in "quotes". Region is optional.
         If you don't pass a region, it will use your currently assigned region.
         If you don't have a currently assigned region, it will use the default for the guild.
-    
+
         Example:
             [p]leagueset other-summoner your_summoner_name @Bird#0000 NA
             [p]leagueset other-summoner "firstname lastname" @Bird#0000 na
         """
         name = name.strip()
-        
+
         # If they did not pass a region, don't change their region if they have one set.
         # If they don't have one set, use the guild's default.
         if not region:
@@ -220,7 +219,6 @@ class LeagueCog(
         # See if summoner name exists on that region.
         await self.get_summoner_info(ctx, name, member, region, False)
 
-    
     @leagueset.command(name="channel")
     async def set_channel(self, ctx: commands.Context):
         """
@@ -231,7 +229,7 @@ class LeagueCog(
         """
         await self.config.alertChannel.set(ctx.channel.id)
         await ctx.send("Channel set.")
-    
+
     @leagueset.command(name="enable-matches")
     async def enable_matches(self, ctx: commands.Context):
         """
@@ -243,7 +241,6 @@ class LeagueCog(
         await self.config.poll_games.set(True)
         await ctx.send("Match tracking enabled.")
         self.task = self.bot.loop.create_task(self._game_alerts())
-
 
     @leagueset.command(name="reset")
     async def reset_guild(self, ctx: commands.Context):
