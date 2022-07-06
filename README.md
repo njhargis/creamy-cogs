@@ -30,7 +30,7 @@
 
 ---
 # Overview
-The pluginss in this repo are exclusively for Red Bot. Please read over the installation instructions and documentation for more information on how to use these cogs.
+The plugins in this repo are exclusively for Red Bot. Please read over the installation instructions and documentation for more information on how to use these cogs.
 
 # Installation
 First make sure you have [Red Bot V3](https://github.com/Cog-Creators/Red-DiscordBot/tree/V3/develop) installed.
