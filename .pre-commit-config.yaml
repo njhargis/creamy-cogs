@@ -20,5 +20,5 @@
           - id: print-msg
             name: print-msg
             language: system
-            entry: echo "uses black styling, flake8 linting, and branch name must begin with bugfix/ or feature/\n"
+            entry: printf "uses black styling, flake8 linting, and branch name must begin with bugfix/ or feature/\n"
             verbose: true
