@@ -4,10 +4,20 @@
 <h4 align="center">A set of plugins for Red Discord-Bot by Creamers.</h4>
 
 <p align="center">
-    <a href="https://www.python.org/downloads/release/python-366/"><img src="https://img.shields.io/badge/Made%20With-Python%203.6-blue.svg?style=for-the-badge">
+    <a href="https://www.python.org/downloads/">
+        <img alt="Python Version" src="https://img.shields.io/badge/python-v3.8-blue">
     </a>
+    <a href="https://github.com/Rapptz/discord.py/">
+        <img src="https://img.shields.io/badge/discord-py-blue.svg" alt="discord.py">
+    </a>    
     <a href="https://github.com/Cog-Creators/Red-DiscordBot">
         <img src="https://img.shields.io/badge/Discord-Red%20Bot-red.svg">
+    </a>
+    <a href="https://github.com/psf/black">
+        <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code Style: Black">
+    </a>
+    <a href="http://makeapullrequest.com">
+        <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg">
     </a>
 </p>
 <p align="center">
