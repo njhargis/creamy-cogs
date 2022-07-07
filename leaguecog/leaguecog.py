@@ -104,6 +104,14 @@ class LeagueCog(
 
         self._ready_event.set()
 
+    @commands.Cog.listener()
+    async def on_red_api_tokens_update(self, service_name, api_tokens):
+        """This will listen for updates to api tokens and update cog instance of league token if it changed"""
+        log.debug("Tokens updated.")
+        if service_name == "league":
+            self.api = api_tokens["api_key"]
+            log.debug("Local key updated.")
+
     async def cog_before_invoke(self, ctx: commands.Context):
         await self._ready_event.wait()
 
