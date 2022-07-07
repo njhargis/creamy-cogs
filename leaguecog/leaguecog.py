@@ -58,6 +58,7 @@ class LeagueCog(
     }
 
     def __init__(self, bot: Red):
+        # Red/Config Vars
         self.bot: Red = bot
         self.config = Config.get_conf(self, 8945225427)
         self.config.register_global(**self.default_global_settings)
@@ -65,8 +66,7 @@ class LeagueCog(
         self.config.register_role(**self.default_role_settings)
         self.config.register_member(**self.default_member_settings)
 
-        self._session = aiohttp.ClientSession()
-
+        # Riot API Vars
         self.api_key = None
         self.champ_api_version = None
         self.champlist = None
@@ -85,6 +85,8 @@ class LeagueCog(
             "pbe": "pbe1",
         }
 
+        # Cog Logic Vars
+        self._session = aiohttp.ClientSession()
         self.task: Optional[asyncio.Task] = None
         self._ready_event: asyncio.Event = asyncio.Event()
         self._init_task: asyncio.Task = self.bot.loop.create_task(self.initialize())
@@ -125,7 +127,8 @@ class LeagueCog(
             await asyncio.sleep(await self.config.refresh_timer())
 
     def cog_unload(self):
-        """Cancel all pending async tasks when the cog is unloaded."""
+        """Close all sessions all pending async tasks when the cog is unloaded."""
+        asyncio.get_event_loop().create_task(self._session.close())
         if self.task:
             self.task.cancel()
 
