@@ -26,20 +26,25 @@ class Blitzcrank(MixinMeta):
             [p]set api league api_key <key>
         """
         # If we've already gotten the API token, don't re-get it from the bot.
-        if not self.api:
+        if not self.api_key:
             db = await self.bot.get_shared_api_tokens("league")
-            self.api = db["api_key"]
+            self.api_key = db["api_key"]
 
-        endOfPath = f"?api_key={self.api}"
-        beginOfPath = f"https://{region}.api.riotgames.com/lol/"
-        return (beginOfPath, endOfPath)
+        # params = f"?api_key={self.api_key}"
+        headers = {"X-Riot-Token": str(self.api_key)}
+        basePath = f"https://{region}.api.riotgames.com/lol/"
+        return (basePath, headers)
 
     async def simple_get(self, url):
-        """Abstracts away simple GET HTTP calls using the cog-wide session."""
+        """
+        Abstracts away simple GET HTTP calls using the cog-wide session.
+        Should only be used if you don't want to handle failure/non-200 response codes.
+        """
         async with self._session.get(url) as response:
             return await response.json()
 
     async def update_version(self):
+        """This gets the most recent League API version, then updates our local list of champions"""
         version = await self.simple_get("https://ddragon.leagueoflegends.com/api/versions.json")
         if not self.champ_api_version:
             self.champ_api_version = version
@@ -74,10 +79,10 @@ class Blitzcrank(MixinMeta):
 
         else:
             # build the url as an f-string, can double-check 'name' in the console
-            beginOfPath, endOfPath = await self.get_riot_url(region)
-            url = f"{beginOfPath}summoner/v4/summoners/by-name/{name}/{endOfPath}".format()
+            basePath, headers = await self.get_riot_url(region)
+            url = f"{basePath}summoner/v4/summoners/by-name/{name}".format()
             log.debug(f"url == {url}")
-            async with self._session.get(url) as req:
+            async with self._session.get(url, headers=headers) as req:
                 try:
                     data = await req.json()
                 except aiohttp.ContentTypeError:
@@ -138,10 +143,10 @@ class Blitzcrank(MixinMeta):
                     smn = summoner["smnId"]
                     region = summoner["region"]
                     log.debug(f"Seeing if summoner: {smn} is in a game in region {region}...")
-                    beginOfPath, endOfPath = await self.get_riot_url(region)
-                    url = f"{beginOfPath}spectator/v4/active-games/by-summoner/{smn}/{endOfPath}".format()
+                    basePath, headers = await self.get_riot_url(region)
+                    url = f"{basePath}spectator/v4/active-games/by-summoner/{smn}".format()
                     log.debug(f"url == {url}")
-                    async with self._session.get(url) as req:
+                    async with self._session.get(url, headers=headers) as req:
                         try:
                             data = await req.json()
                         except aiohttp.ContentTypeError:
