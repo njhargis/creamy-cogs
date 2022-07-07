@@ -1,5 +1,7 @@
 import asyncio
+from lib2to3.pytree import Base
 import logging
+from xml.dom import NotFoundErr
 import aiohttp
 import discord
 from redbot.core import Config
@@ -30,7 +32,6 @@ class Blitzcrank(MixinMeta):
             db = await self.bot.get_shared_api_tokens("league")
             self.api_key = db["api_key"]
 
-        # params = f"?api_key={self.api_key}"
         headers = {"X-Riot-Token": str(self.api_key)}
         basePath = f"https://{region}.api.riotgames.com/lol/"
         return (basePath, headers)
@@ -97,6 +98,15 @@ class Blitzcrank(MixinMeta):
                         data["accountId"],
                         data["id"],
                     )
+
+                    # Need to check if this summoner Id is already registered to someone in this guild..
+                    user = self.config.member(member)
+                    await user.summoner_name.set(name)
+                    await user.puuid.set(pid)
+                    await user.account_id.set(acctId)
+                    await user.summoner_id.set(smnId)
+                    await user.region.set(region.lower())
+
                     currMsg = (
                         f"Summoner now registered.\n"
                         f"**Summoner Name**: {name}\n"
@@ -104,14 +114,6 @@ class Blitzcrank(MixinMeta):
                         f"**AccountId**: {acctId}\n"
                         f"**SummonerId**: {smnId}"
                     )
-                    async with self.config.guild(ctx.guild).registered_summoners() as reg_smn:
-                        # Need to check if this summoner Id is already in the list
-                        reg_smn.append({"smnId": data["id"], "region": region.lower()})
-                    await self.config.member(member).summoner_name.set(name)
-                    await self.config.member(member).puuid.set(data["puuid"])
-                    await self.config.member(member).account_id.set(data["accountId"])
-                    await self.config.member(member).summoner_id.set(data["id"])
-                    await self.config.member(member).region.set(region.lower())
 
                 else:
                     currTitle = "Registration Failure"
@@ -129,119 +131,49 @@ class Blitzcrank(MixinMeta):
             embed = await self.build_embed(title=currTitle, msg=currMsg, _type=currType)
             await message.edit(content=ctx.author.mention, embed=embed)
 
-    async def check_games(self):  # noqa: C901
+    async def check_games(self):
         # Find alert channel
         # Handle no channel set up.
-        channelId = await self.config.alertChannel()
-        channel = self.bot.get_channel(channelId)
-        log.debug(f"Found channel {channel}")
-        # Loop through registered summoners
-        async with self.config.guild(channel.guild).registered_summoners() as registered_summoners:
-            for summoner in registered_summoners:
-                # Skip blank records
-                if summoner != {}:
-                    smn = summoner["smnId"]
-                    region = summoner["region"]
-                    log.debug(f"Seeing if summoner: {smn} is in a game in region {region}...")
-                    basePath, headers = await self.get_riot_url(region)
-                    url = f"{basePath}spectator/v4/active-games/by-summoner/{smn}".format()
-                    log.debug(f"url == {url}")
-                    async with self._session.get(url, headers=headers) as req:
-                        try:
-                            data = await req.json()
-                        except aiohttp.ContentTypeError:
-                            data = {}
-                        # They are in a game.
-                        if req.status == 200:
-                            # Only care about games on Summoner's Rift
-                            if data["gameMode"] == "CLASSIC":
-                                # If it is a custom, only care if 10 non-bots.
-                                playerCount = 0
-                                if data["gameType"] == "CUSTOM_GAME":
-                                    for participant in data["participants"]:
-                                        if not participant["bot"]:
-                                            playerCount += 1
-                                # FOR DEV TESTING IN CUSTOMS 1v0, swap comment out line below.
-                                if (data["gameType"] == "MATCHED_GAME") or (
-                                    data["gameType"] == "CUSTOM_GAME"
-                                ):
-                                    # if (data["gameType"] == "MATCHED_GAME") or (data["gameType"] == "CUSTOM_GAME" and playerCount == 10):
-                                    # Use combination of gameid + smn id to add to current active game list if not in there already.
-                                    alreadyTracked = False
-                                    # This could be more DRY as it is repeated below.
-                                    # async with self.config.guild(channel.guild).live_games() as live_games:
-                                    curr_live_games = await self.config.guild(
-                                        channel.guild
-                                    ).live_games()
-                                    # Need to not post twice when someone is in a game.
-                                    for active_game in curr_live_games:
-                                        if active_game != {} and active_game["active"]:
-                                            if (
-                                                str(active_game["gameId"])
-                                                + str(active_game["smnId"])
-                                            ) == (str(data["gameId"]) + str(smn)):
-                                                alreadyTracked = True
-                                    log.debug("Done checking vs list of tracked games.")
-                                    if not alreadyTracked:
-                                        log.debug("Appending new live game")
-                                        # We only care about info related to this specific summoner
-                                        for participant in data["participants"]:
-                                            if participant["summonerId"] == smn:
-                                                thisSmnInfo = participant
-                                        await self.config.guild(channel.guild).live_games.set_raw(
-                                            str(data["gameId"]) + str(smn),
-                                            value={
-                                                "gameId": data["gameId"],
-                                                "smnId": smn,
-                                                "region": region,
-                                                "startTime": data["gameStartTime"],
-                                                "teamId": thisSmnInfo["teamId"],
-                                                "active": True,
-                                            },
-                                        )
-                                        champs = self.champlist["data"]
-                                        for i in champs:
-                                            loopChamp = champs[i]
-                                            if str(loopChamp["key"]) == str(
-                                                thisSmnInfo["championId"]
-                                            ):
-                                                champName = loopChamp["name"]
-                                        await channel.send(
-                                            (
-                                                "Summoner {smnId} started a game on {postChampName}!"
-                                            ).format(
-                                                smnId=summoner["smnId"],
-                                                postChampName=champName,
-                                            )
-                                        )
-                                    else:
-                                        log.debug("We are already tracking this game.")
-                        else:
-                            if req.status == 404:
-                                log.debug("Summoner is not currently in a game.")
-                                # This could be more DRY, see above.
-                                curr_live_games = await self.config.guild(
-                                    channel.guild
-                                ).live_games()
-                                for active_game in curr_live_games:
-                                    smn_id = await self.config.guild(
-                                        channel.guild
-                                    ).live_games.get_raw(active_game, "smnId")
-                                    if str(smn_id) == str(smn):
-                                        await self.config.guild(
-                                            channel.guild
-                                        ).live_games.clear_raw(active_game)
-                                        await channel.send(
-                                            ("Summoner {smnId}'s game has ended!").format(
-                                                smnId=smn_id
-                                            )
-                                        )
+        try:
+            channelId = await self.config.alertChannel()
+            channel = self.bot.get_channel(channelId)
+            log.debug(f"Found channel {channel}")
+        except BaseException as e:
+            # Need to message owner if no channel is setup.
+            log.exception("No channel setup to announce matches in." + str(e))
 
-                            else:
-                                # Handle this more graciously
-                                log.warning = (
-                                    "Riot API request failed with status code {statusCode}"
-                                ).format(statusCode=req.status)
+        # Loop through registered guild members
+        registered_users = await self.config.all_members(channel.guild)
+        for summoner in registered_users:
+            data = registered_users[summoner]
+            basePath, headers = await self.get_riot_url(data["region"])
+            url = f"{basePath}spectator/v4/active-games/by-summoner/{data['summoner_id']}"
+            async with self._session.get(url, headers=headers) as req:
+                try:
+                    data = await req.json()
+                except aiohttp.ContentTypeError:
+                    data = {}
+
+                if req.status == 200:
+                    self.user_in_game()
+                elif req.status == 404:
+                    self.user_is_not_in_game()
+                elif req.status == 401:
+                    # Need to raise token error
+                    self.token_unauthorized()
                 else:
-                    log.debug("Skipped record")
-                    continue
+                    log.warning = ("Riot API request failed with status code {statusCode}").format(
+                        statusCode=req.status
+                    )
+
+    async def user_in_game(self):
+        # Need to implement
+        print("foo")
+
+    async def user_is_not_in_game(self):
+        # Need to implement
+        print("foo")
+
+    async def token_unauthorized():
+        # Need to implement
+        print("foo")
