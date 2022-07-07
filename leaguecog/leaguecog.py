@@ -65,11 +65,11 @@ class LeagueCog(
         self.config.register_role(**self.default_role_settings)
         self.config.register_member(**self.default_member_settings)
 
-        self.champ_api_version = None
-
         self._session = aiohttp.ClientSession()
+
+        self.api_key = None
+        self.champ_api_version = None
         self.champlist = None
-        self.api = None
         self.regions = {
             "br": "br1",
             "eune": "eun1",
@@ -109,7 +109,7 @@ class LeagueCog(
         """This will listen for updates to api tokens and update cog instance of league token if it changed"""
         log.debug("Tokens updated.")
         if service_name == "league":
-            self.api = api_tokens["api_key"]
+            self.api_key = api_tokens["api_key"]
             log.debug("Local key updated.")
 
     async def cog_before_invoke(self, ctx: commands.Context):
@@ -125,8 +125,7 @@ class LeagueCog(
             await asyncio.sleep(await self.config.refresh_timer())
 
     def cog_unload(self):
-        """Close all sessions all pending async tasks when the cog is unloaded."""
-        asyncio.get_event_loop().create_task(self._session.close())
+        """Cancel all pending async tasks when the cog is unloaded."""
         if self.task:
             self.task.cancel()
 
@@ -145,7 +144,7 @@ class LeagueCog(
         # Set announcement channel
         # Setup Riot API key and request a permanent one.
         # Might be helpful example: https://github.com/Cog-Creators/Red-DiscordBot/blob/V3/develop/redbot/cogs/streams/streams.py#L122
-        # You also could bot.send_to_owners if self.api is not set.
+        # You also could bot.send_to_owners if self.api_key is not set.
         return
 
     @league.command(name="summoner")
