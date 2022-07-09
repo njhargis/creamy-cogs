@@ -2,7 +2,7 @@ import logging
 import discord
 from leaguecog.mixinmeta import MixinMeta
 
-log = logging.getLogger("red.creamy.cogs.league")
+log = logging.getLogger("red.creamy-cogs.leaguecog")
 
 
 class Ezreal(MixinMeta):
@@ -12,7 +12,7 @@ class Ezreal(MixinMeta):
     This class is responsible for handling chat interactions with Discord.
     """
 
-    async def build_embed(self, title, msg, _type):
+    async def build_embed(self, title=None, msg=None, _type=None):
         embed = discord.Embed()
 
         if title:

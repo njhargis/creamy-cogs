@@ -1,17 +1,21 @@
 import asyncio
 import logging
 from typing import Optional
+
 import aiohttp
 import discord
 from abc import ABC
 from redbot.core import commands, Config
 from redbot.core.bot import Red
+from redbot.core.utils.menus import start_adding_reactions
+from redbot.core.utils.predicates import ReactionPredicate
+
 
 from .blitzcrank import Blitzcrank
 from .ezreal import Ezreal
 
 
-log = logging.getLogger("red.creamy.cogs.league")
+log = logging.getLogger("red.creamy-cogs.leaguecog")
 
 
 class CompositeMetaClass(type(commands.Cog), type(ABC)):
@@ -38,11 +42,11 @@ class LeagueCog(
         # We should dynamically calculate this based on registered summoners to not hit throttle limit.
         "refresh_timer": 30,
         "notified_owner_missing_league_key": False,
-        "poll_games": False,
     }
 
     default_guild_settings = {
         "default_region": "NA",
+        "poll_games": False,
         "live_games": {},
         "registered_summoners": [{}],
     }
@@ -58,7 +62,6 @@ class LeagueCog(
     }
 
     def __init__(self, bot: Red):
-        # Red/Config Vars
         self.bot: Red = bot
         self.config = Config.get_conf(self, 8945225427)
         self.config.register_global(**self.default_global_settings)
@@ -66,27 +69,28 @@ class LeagueCog(
         self.config.register_role(**self.default_role_settings)
         self.config.register_member(**self.default_member_settings)
 
-        # Riot API Vars
-        self.api_key = None
         self.champ_api_version = None
+
+        self._session = aiohttp.ClientSession()
         self.champlist = None
+        self.api = None
         self.regions = {
-            "br": "br1",
-            "eune": "eun1",
-            "euw": "euw1",
-            "jp": "jp1",
-            "kr": "kr",
-            "lan": "la1",
-            "las": "la2",
-            "na": "na1",
-            "oce": "oc1",
-            "tr": "tr1",
-            "ru": "ru",
-            "pbe": "pbe1",
+            # restructuring this as a nested dict avoids constructing extra
+            #   lists and dictionaries any time we need region processing
+            "br": {"ser": "br1", "emoji": "🇧🇷"},
+            "eune": {"ser": "eun1", "emoji": "🇳🇴"},
+            "euw": {"ser": "euw1", "emoji": "🇪🇺"},
+            "jp": {"ser": "jp1", "emoji": "🇯🇵"},
+            "kr": {"ser": "kr", "emoji": "🇰🇷"},
+            "lan": {"ser": "la1", "emoji": "🇲🇽"},
+            "las": {"ser": "la2", "emoji": "🇦🇷"},
+            "na": {"ser": "na1", "emoji": "🇺🇸"},
+            "oce": {"ser": "oc1", "emoji": "🇦🇺"},
+            "tr": {"ser": "tr1", "emoji": "🇹🇷"},
+            "ru": {"ser": "ru", "emoji": "🇷🇺"},
+            "pbe": {"ser": "pbe1", "emoji": "🇧"},
         }
 
-        # Cog Logic Vars
-        self._session = aiohttp.ClientSession()
         self.task: Optional[asyncio.Task] = None
         self._ready_event: asyncio.Event = asyncio.Event()
         self._init_task: asyncio.Task = self.bot.loop.create_task(self.initialize())
@@ -111,7 +115,7 @@ class LeagueCog(
         """This will listen for updates to api tokens and update cog instance of league token if it changed"""
         log.debug("Tokens updated.")
         if service_name == "league":
-            self.api_key = api_tokens["api_key"]
+            self.api = api_tokens["api_key"]
             log.debug("Local key updated.")
 
     async def cog_before_invoke(self, ctx: commands.Context):
@@ -127,8 +131,7 @@ class LeagueCog(
             await asyncio.sleep(await self.config.refresh_timer())
 
     def cog_unload(self):
-        """Close all sessions all pending async tasks when the cog is unloaded."""
-        asyncio.get_event_loop().create_task(self._session.close())
+        """Cancel all pending async tasks when the cog is unloaded."""
         if self.task:
             self.task.cancel()
 
@@ -139,15 +142,62 @@ class LeagueCog(
     @league.command(name="setup")
     async def setup_cog(self, ctx: commands.Context):
         """
-        Returns a user's summoner name.
-        If you do not enter a username, returns your own.
+        Guides the user through setting up different cog settings
         """
-        # Set if they want to poll live games.
-        # Set guild region
-        # Set announcement channel
-        # Setup Riot API key and request a permanent one.
+
+        # allow the user to react to set region
+        region_embed = await Ezreal.build_embed(
+            self,
+            title="SETUP - REGION",
+            msg="React with the flag that most closely represents your region",
+        )
+        region_msg = await ctx.send(embed=region_embed)
+        REGION_EMOJIS = [v["emoji"] for v in self.regions.values()]
+        # set up a ReactionPredicate and interpret the response
+        #   then index the server (ex. 'na1') and abbreviation (ex. 'na')
+        start_adding_reactions(region_msg, REGION_EMOJIS)
+        region_pred = ReactionPredicate.with_emojis(REGION_EMOJIS, region_msg, ctx.author)
+        await ctx.bot.wait_for("reaction_add", check=region_pred)
+        idx = region_pred.result
+        ser = [v["ser"] for v in self.regions.values()][idx]
+        region = [k for k in self.regions.keys()][idx]
+        log.info(f"ser == {ser}, region == {region}")
+
+        # TODO set guild region
+        # TODO remove reactions
+
+        # edit the original embed and show the user what was selected
+        region_embed = await Ezreal.build_embed(
+            self, title="Setup - REGION", msg=f"Region set to {region.upper()}"
+        )
+        await region_msg.edit(content=ctx.author.mention, embed=region_embed)
+
+        # set polling on or off
+        polling_embed = await Ezreal.build_embed(
+            self, title="SETUP - POLLING", msg="Do you want to poll for live games?"
+        )
+        polling_msg = await ctx.send(embed=polling_embed)
+        # set up a ReactionPredicate and interpret the response
+        #   built-in method .yes_or_no() can interpret True/False
+        start_adding_reactions(polling_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+        polling_pred = ReactionPredicate.yes_or_no(polling_msg, ctx.author)
+        await ctx.bot.wait_for("reaction_add", check=polling_pred)
+
+        if polling_pred.result is True:
+            # TODO set poll_games to True
+            pass
+        # TODO remove reactions
+
+        polling_embed = await Ezreal.build_embed(
+            self, title="SETUP - POLLING", msg=f"Polling live games = {polling_pred.result}"
+        )
+        await polling_msg.edit(content=ctx.author.mention, embed=polling_embed)
+
+        # TODO Set announcement channel
+        # TODO Setup Riot API key and request a permanent one.
+
         # Might be helpful example: https://github.com/Cog-Creators/Red-DiscordBot/blob/V3/develop/redbot/cogs/streams/streams.py#L122
-        # You also could bot.send_to_owners if self.api_key is not set.
+        # You also could bot.send_to_owners if self.api is not set.
         return
 
     @league.command(name="summoner")

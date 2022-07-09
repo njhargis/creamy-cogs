@@ -6,7 +6,7 @@ from redbot.core import Config
 
 from leaguecog.mixinmeta import MixinMeta
 
-log = logging.getLogger("red.creamy.cogs.league")
+log = logging.getLogger("red.creamy-cogs.leaguecog")
 
 
 class Blitzcrank(MixinMeta):
@@ -14,8 +14,8 @@ class Blitzcrank(MixinMeta):
     'The time of man has come to an end.'
 
     This class is responsible for:
-       1) handling the token for Riot API.
-       2) grabbing and pulling data from Riot API.
+        1) handling the token for Riot API.
+        2) grabbing and pulling data from Riot API.
     """
 
     async def get_riot_url(self, region):
