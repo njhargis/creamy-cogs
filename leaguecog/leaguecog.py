@@ -143,11 +143,18 @@ class LeagueCog(
     async def setup_cog(self, ctx: commands.Context):
         """
         Guides the user through setting up different cog settings
+
+        NOTE this is in dire need of refactoring
+
+        For example, I think it would be reasonable to define these predicates
+        as different functions, as this would enable us to let users go back
+        and reset different settings individually later on with something like
+        "[p]league setup --region"
         """
 
-        # TODO Setup Riot API key and request a permanent one.
+        ### SETUP RIOT API KEY ### TODO
 
-        # allow the user to react to set region
+        ### SET REGION ###
         region_embed = await Ezreal.build_embed(
             self,
             title="SETUP - REGION",
@@ -174,7 +181,7 @@ class LeagueCog(
         )
         await region_msg.edit(content=ctx.author.mention, embed=region_embed)
 
-        # allow the user to react to turn polling on or off
+        ### ENABLE POLLING OR LEAVE OFF ###
         polling_embed = await Ezreal.build_embed(
             self, title="SETUP - POLLING", msg="Do you want to poll for live games?"
         )
@@ -194,7 +201,7 @@ class LeagueCog(
         )
         await polling_msg.edit(content=ctx.author.mention, embed=polling_embed)
 
-        # allow the user to choose a channel for announcements
+        ### CHOOSE ANNOUCEMENT CHANNEL ###
         channel_embed = await Ezreal.build_embed(
             self,
             title="SETUP - ANNOUNCEMENT CHANNEL",
