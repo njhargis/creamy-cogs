@@ -153,6 +153,7 @@ class LeagueCog(
         """
 
         ### SETUP RIOT API KEY ### TODO
+        # regex pattern: 'RGAPI-\w{8}-\w{4}-\w{4}-\w{4}-\w{12}'
 
         ### SET REGION ###
         region_embed = await Ezreal.build_embed(
@@ -162,17 +163,25 @@ class LeagueCog(
         )
         region_msg = await ctx.send(embed=region_embed)
         REGION_EMOJIS = [v["emoji"] for v in self.regions.values()]
+
         # set up a ReactionPredicate and interpret the response
         #   then index the server (ex. 'na1') and abbreviation (ex. 'na')
         start_adding_reactions(region_msg, REGION_EMOJIS)
         region_pred = ReactionPredicate.with_emojis(REGION_EMOJIS, region_msg, ctx.author)
         await ctx.bot.wait_for("reaction_add", check=region_pred)
+
         idx = region_pred.result
         ser = [v["ser"] for v in self.regions.values()][idx]
         region = [k for k in self.regions.keys()][idx]
-        log.info(f"ser == {ser}, region == {region}")
 
-        # TODO set guild region
+        log.info(f"SETUP ser == {ser}, region == {region}")
+
+        # set guild region
+        await self.config.guild(ctx.guild).default_region.set(region.upper())
+        log.info(
+            f"SETUP self.config.guild(ctx.guild).default_region() == {await self.config.guild(ctx.guild).default_region()}"
+        )
+
         # TODO remove reactions
 
         # edit the original embed and show the user what was selected
@@ -186,14 +195,19 @@ class LeagueCog(
             self, title="SETUP - POLLING", msg="Do you want to poll for live games?"
         )
         polling_msg = await ctx.send(embed=polling_embed)
+
         # set up a ReactionPredicate and interpret the response
         #   built-in method .yes_or_no() can interpret True/False
         start_adding_reactions(polling_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
         polling_pred = ReactionPredicate.yes_or_no(polling_msg, ctx.author)
         await ctx.bot.wait_for("reaction_add", check=polling_pred)
+
         if polling_pred.result is True:
-            # TODO set poll_games to True
-            pass
+            await self.config.guild(ctx.guild).poll_games.set(True)
+
+        log.info(
+            f"SETUP self.config.guild(ctx.guild).poll_games() == {await self.config.guild(ctx.guild).poll_games()}"
+        )
         # TODO remove reactions
         # edit the original embed and show the user what was selected
         polling_embed = await Ezreal.build_embed(
@@ -214,9 +228,10 @@ class LeagueCog(
         # set up a MessagePredicate to interpret user text input
         channel_pred = MessagePredicate.valid_text_channel(ctx)
         await ctx.bot.wait_for("message", check=channel_pred)
-        log.info(f"channel_pred.result == {channel_pred.result}")
+
+        log.info(f"SETUP channel_pred.result == {channel_pred.result}")
         # TODO purge the last message from the user
-        # TODO Set announcement channel
+        # TODO Set announcement channel... is there a config value for this?
 
         channel_embed = await Ezreal.build_embed(
             self,
