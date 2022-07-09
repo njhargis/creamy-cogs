@@ -1,4 +1,5 @@
 import asyncio
+from email.message import Message
 import enum
 import logging
 from typing import Optional
@@ -219,39 +220,62 @@ class LeagueCog(
         ### CHOOSE ANNOUCEMENT CHANNEL ###
         # get a dict of all available text channels
         #   this way you can get names and ids in one loop
+
         text_channel_dict = {}
         for guild in self.bot.guilds:
             for channel in guild.text_channels:
                 text_channel_dict[channel.name] = channel.id
 
-        log.info(f"text_channel_dict == {text_channel_dict}")
+        # if number of channels is <= 10, can use a reaction predicate with the number emojis
+        #   otherwise, catch an IndexError for the list of emojis and let the user
+        #       input the name or number of the channel they want to use
 
-        # only get the number of emojis you need to number the channels
-        number_emojis = ReactionPredicate.NUMBER_EMOJIS[: len(text_channel_dict.keys())]
-        msg = (
-            "What channel do you want to use for announcements?\n"
-            "React with the appropriate channel number:\n\n"
-        )
+        msg = "What channel do you want to use for announcements?\n"
+        if len(text_channel_dict) <= 10:
+            # only get the number of emojis you need to number the channels
+            number_emojis = ReactionPredicate.NUMBER_EMOJIS[: len(text_channel_dict)]
 
-        # number the channels within the embed message
-        for emoji, channel in zip(number_emojis, text_channel_dict.keys()):
-            msg += f"{emoji} {channel}\n"
+            msg += "React with the appropriate channel number:\n\n"
 
-        channel_embed = await Ezreal.build_embed(
-            self,
-            title="SETUP - ANNOUNCEMENT CHANNEL",
-            msg=msg,
-        )
-        channel_msg = await ctx.send(embed=channel_embed)
+            # number the channels within the embed message with the emojis
+            for emoji, channel in zip(number_emojis, text_channel_dict.keys()):
+                msg += f"{emoji} {channel}\n"
 
-        # set up a ReactionPredicate and index text_channel_dict based on response
-        start_adding_reactions(channel_msg, number_emojis)
-        channel_pred = ReactionPredicate.with_emojis(number_emojis, channel_msg, ctx.author)
-        await ctx.bot.wait_for("reaction_add", check=channel_pred)
+            channel_embed = await Ezreal.build_embed(
+                self,
+                title="SETUP - ANNOUNCEMENT CHANNEL",
+                msg=msg,
+            )
+            channel_msg = await ctx.send(embed=channel_embed)
 
+            # set up a ReactionPredicate and index text_channel_dict based on response
+            start_adding_reactions(channel_msg, number_emojis)
+            channel_pred = ReactionPredicate.with_emojis(number_emojis, channel_msg, ctx.author)
+            await ctx.bot.wait_for("reaction_add", check=channel_pred)
+
+        else:
+            # add code blocking for looks
+            msg += "Input the appropriate channel number:\n```"
+            for idx, ch in enumerate(text_channel_dict.keys()):
+                msg += f"{idx}. {ch}\n"
+            msg += "```"
+            channel_embed = await Ezreal.build_embed(
+                self,
+                title="SETUP - ANNOUNCEMENT CHANNEL",
+                msg=msg,
+            )
+            channel_msg = await ctx.send(embed=channel_embed)
+            # make sure the response is an integer that corresponds to a channel
+            #   but MessagePredicate will read these as strings, not ints
+            channel_pred = MessagePredicate.contained_in(
+                [str(i) for i in range(len(text_channel_dict))]
+            )
+            await ctx.bot.wait_for("message", check=channel_pred)
+
+        # index the channel name and id from the dict
         channel_idx = channel_pred.result
         alert_channel_name = [k for k in text_channel_dict.keys()][channel_idx]
-        alert_channel_id = [v for v in text_channel_dict.values()][channel_idx]
+        alert_channel_id = text_channel_dict[alert_channel_name]
 
         log.info(f"SETUP channel_pred.result == {channel_pred.result}")
         log.info(f"SETUP alert_channel_name = {alert_channel_name}")
@@ -263,7 +287,7 @@ class LeagueCog(
             f"SETUP self.config.guild(ctx.guild).alertChannel() == {await self.config.guild(ctx.guild).alertChannel()}"
         )
 
-        # TODO remove reactions
+        # TODO remove reactions, or remove last message if had to get text input
 
         # edit the original embed and show the user which channel was selected
         channel_embed = await Ezreal.build_embed(
