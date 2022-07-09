@@ -1,10 +1,12 @@
 import asyncio
 import logging
+
 import aiohttp
 import discord
 from redbot.core import Config
 
-from leaguecog.mixinmeta import MixinMeta
+from .mixinmeta import MixinMeta
+
 
 log = logging.getLogger("red.creamy-cogs.leaguecog")
 
