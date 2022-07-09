@@ -8,7 +8,7 @@ from abc import ABC
 from redbot.core import commands, Config
 from redbot.core.bot import Red
 from redbot.core.utils.menus import start_adding_reactions
-from redbot.core.utils.predicates import ReactionPredicate
+from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
 
 
 from .blitzcrank import Blitzcrank
@@ -145,6 +145,8 @@ class LeagueCog(
         Guides the user through setting up different cog settings
         """
 
+        # TODO Setup Riot API key and request a permanent one.
+
         # allow the user to react to set region
         region_embed = await Ezreal.build_embed(
             self,
@@ -172,7 +174,7 @@ class LeagueCog(
         )
         await region_msg.edit(content=ctx.author.mention, embed=region_embed)
 
-        # set polling on or off
+        # allow the user to react to turn polling on or off
         polling_embed = await Ezreal.build_embed(
             self, title="SETUP - POLLING", msg="Do you want to poll for live games?"
         )
@@ -182,19 +184,39 @@ class LeagueCog(
         start_adding_reactions(polling_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
         polling_pred = ReactionPredicate.yes_or_no(polling_msg, ctx.author)
         await ctx.bot.wait_for("reaction_add", check=polling_pred)
-
         if polling_pred.result is True:
             # TODO set poll_games to True
             pass
         # TODO remove reactions
-
+        # edit the original embed and show the user what was selected
         polling_embed = await Ezreal.build_embed(
             self, title="SETUP - POLLING", msg=f"Polling live games = {polling_pred.result}"
         )
         await polling_msg.edit(content=ctx.author.mention, embed=polling_embed)
 
+        # allow the user to choose a channel for announcements
+        channel_embed = await Ezreal.build_embed(
+            self,
+            title="SETUP - ANNOUNCEMENT CHANNEL",
+            msg=(
+                "What channel do you want to use for announcements?\n"
+                "Please enter the channel name:"
+            ),
+        )
+        channel_msg = await ctx.send(embed=channel_embed)
+        # set up a MessagePredicate to interpret user text input
+        channel_pred = MessagePredicate.valid_text_channel(ctx)
+        await ctx.bot.wait_for("message", check=channel_pred)
+        log.info(f"channel_pred.result == {channel_pred.result}")
+        # TODO purge the last message from the user
         # TODO Set announcement channel
-        # TODO Setup Riot API key and request a permanent one.
+
+        channel_embed = await Ezreal.build_embed(
+            self,
+            title="SETUP - ANNOUNCEMENT CHANNEL",
+            msg=f"Annoucement channel set - #{channel_pred.result}",
+        )
+        await channel_msg.edit(content=ctx.author.mention, embed=channel_embed)
 
         # Might be helpful example: https://github.com/Cog-Creators/Red-DiscordBot/blob/V3/develop/redbot/cogs/streams/streams.py#L122
         # You also could bot.send_to_owners if self.api is not set.
