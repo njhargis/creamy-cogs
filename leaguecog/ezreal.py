@@ -1,6 +1,9 @@
 import logging
+
 import discord
-from leaguecog.mixinmeta import MixinMeta
+
+from .mixinmeta import MixinMeta
+
 
 log = logging.getLogger("red.creamy-cogs.leaguecog")
 
