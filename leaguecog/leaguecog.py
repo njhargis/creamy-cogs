@@ -1,4 +1,5 @@
 import asyncio
+import enum
 import logging
 from typing import Optional
 
@@ -49,6 +50,7 @@ class LeagueCog(
         "poll_games": False,
         "live_games": {},
         "registered_summoners": [{}],
+        "alertChannel": "",
     }
 
     default_role_settings = {"mention": False}
@@ -77,6 +79,8 @@ class LeagueCog(
         self.regions = {
             # restructuring this as a nested dict avoids constructing extra
             #   lists and dictionaries any time we need region processing
+            #       TODO reorder the list based on likely use case
+            #           i.e. NA could probably be closer to the top
             "br": {"ser": "br1", "emoji": "🇧🇷"},
             "eune": {"ser": "eun1", "emoji": "🇳🇴"},
             "euw": {"ser": "euw1", "emoji": "🇪🇺"},
@@ -152,9 +156,6 @@ class LeagueCog(
         "[p]league setup --region"
         """
 
-        ### SETUP RIOT API KEY ### TODO
-        # regex pattern: 'RGAPI-\w{8}-\w{4}-\w{4}-\w{4}-\w{12}'
-
         ### SET REGION ###
         region_embed = await Ezreal.build_embed(
             self,
@@ -162,17 +163,17 @@ class LeagueCog(
             msg="React with the flag that most closely represents your region",
         )
         region_msg = await ctx.send(embed=region_embed)
-        REGION_EMOJIS = [v["emoji"] for v in self.regions.values()]
+        region_emojis = [v["emoji"] for v in self.regions.values()]
 
         # set up a ReactionPredicate and interpret the response
         #   then index the server (ex. 'na1') and abbreviation (ex. 'na')
-        start_adding_reactions(region_msg, REGION_EMOJIS)
-        region_pred = ReactionPredicate.with_emojis(REGION_EMOJIS, region_msg, ctx.author)
+        start_adding_reactions(region_msg, region_emojis)
+        region_pred = ReactionPredicate.with_emojis(region_emojis, region_msg, ctx.author)
         await ctx.bot.wait_for("reaction_add", check=region_pred)
 
-        idx = region_pred.result
-        ser = [v["ser"] for v in self.regions.values()][idx]
-        region = [k for k in self.regions.keys()][idx]
+        region_idx = region_pred.result
+        ser = [v["ser"] for v in self.regions.values()][region_idx]
+        region = [k for k in self.regions.keys()][region_idx]
 
         log.info(f"SETUP ser == {ser}, region == {region}")
 
@@ -186,7 +187,7 @@ class LeagueCog(
 
         # edit the original embed and show the user what was selected
         region_embed = await Ezreal.build_embed(
-            self, title="Setup - REGION", msg=f"Region set to {region.upper()}"
+            self, title="SETUP - REGION", msg=f"Region set to {region.upper()}"
         )
         await region_msg.edit(content=ctx.author.mention, embed=region_embed)
 
@@ -211,37 +212,67 @@ class LeagueCog(
         # TODO remove reactions
         # edit the original embed and show the user what was selected
         polling_embed = await Ezreal.build_embed(
-            self, title="SETUP - POLLING", msg=f"Polling live games = {polling_pred.result}"
+            self, title="SETUP - POLLING", msg=f"Polling live games set to {polling_pred.result}"
         )
         await polling_msg.edit(content=ctx.author.mention, embed=polling_embed)
 
         ### CHOOSE ANNOUCEMENT CHANNEL ###
+        # get a dict of all available text channels
+        #   this way you can get names and ids in one loop
+        text_channel_dict = {}
+        for guild in self.bot.guilds:
+            for channel in guild.text_channels:
+                text_channel_dict[channel.name] = channel.id
+
+        log.info(f"text_channel_dict == {text_channel_dict}")
+
+        # only get the number of emojis you need to number the channels
+        number_emojis = ReactionPredicate.NUMBER_EMOJIS[: len(text_channel_dict.keys())]
+        msg = (
+            "What channel do you want to use for announcements?\n"
+            "React with the appropriate channel number:\n\n"
+        )
+
+        # number the channels within the embed message
+        for emoji, channel in zip(number_emojis, text_channel_dict.keys()):
+            msg += f"{emoji} {channel}\n"
+
         channel_embed = await Ezreal.build_embed(
             self,
             title="SETUP - ANNOUNCEMENT CHANNEL",
-            msg=(
-                "What channel do you want to use for announcements?\n"
-                "Please enter the channel name:"
-            ),
+            msg=msg,
         )
         channel_msg = await ctx.send(embed=channel_embed)
-        # set up a MessagePredicate to interpret user text input
-        channel_pred = MessagePredicate.valid_text_channel(ctx)
-        await ctx.bot.wait_for("message", check=channel_pred)
+
+        # set up a ReactionPredicate and index text_channel_dict based on response
+        start_adding_reactions(channel_msg, number_emojis)
+        channel_pred = ReactionPredicate.with_emojis(number_emojis, channel_msg, ctx.author)
+        await ctx.bot.wait_for("reaction_add", check=channel_pred)
+
+        channel_idx = channel_pred.result
+        alert_channel_name = [k for k in text_channel_dict.keys()][channel_idx]
+        alert_channel_id = [v for v in text_channel_dict.values()][channel_idx]
 
         log.info(f"SETUP channel_pred.result == {channel_pred.result}")
-        # TODO purge the last message from the user
-        # TODO Set announcement channel... is there a config value for this?
+        log.info(f"SETUP alert_channel_name = {alert_channel_name}")
+        log.info(f"SETUP alert_channel_id == {alert_channel_id}")
 
+        # set the alert channel via channel id
+        await self.config.guild(ctx.guild).alertChannel.set(alert_channel_id)
+        log.info(
+            f"SETUP self.config.guild(ctx.guild).alertChannel() == {await self.config.guild(ctx.guild).alertChannel()}"
+        )
+
+        # TODO remove reactions
+
+        # edit the original embed and show the user which channel was selected
         channel_embed = await Ezreal.build_embed(
             self,
             title="SETUP - ANNOUNCEMENT CHANNEL",
-            msg=f"Annoucement channel set - #{channel_pred.result}",
+            msg=f"Annoucement channel set to #{alert_channel_name}",
         )
         await channel_msg.edit(content=ctx.author.mention, embed=channel_embed)
 
-        # Might be helpful example: https://github.com/Cog-Creators/Red-DiscordBot/blob/V3/develop/redbot/cogs/streams/streams.py#L122
-        # You also could bot.send_to_owners if self.api is not set.
         return
 
     @league.command(name="summoner")
