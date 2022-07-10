@@ -2,7 +2,7 @@ import logging
 import discord
 from leaguecog.mixinmeta import MixinMeta
 
-log = logging.getLogger("red.creamy.cogs.league")
+log = logging.getLogger("red.creamy-cogs.league")
 
 
 class Ezreal(MixinMeta):

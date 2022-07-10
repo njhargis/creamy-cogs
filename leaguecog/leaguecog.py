@@ -11,7 +11,7 @@ from .blitzcrank import Blitzcrank
 from .ezreal import Ezreal
 
 
-log = logging.getLogger("red.creamy.cogs.league")
+log = logging.getLogger("red.creamy-cogs.league")
 
 
 class CompositeMetaClass(type(commands.Cog), type(ABC)):
@@ -35,10 +35,10 @@ class LeagueCog(
     """
 
     default_global_settings = {
-        # We should dynamically calculate this based on registered summoners to not hit throttle limit.
-        "refresh_timer": 30,
         "notified_owner_missing_league_key": False,
         "poll_games": False,
+        # We should dynamically calculate this based on registered summoners to not hit throttle limit.
+        "refresh_timer": 30,
     }
 
     default_guild_settings = {

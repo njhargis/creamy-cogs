@@ -8,7 +8,7 @@ from redbot.core import Config
 
 from leaguecog.mixinmeta import MixinMeta
 
-log = logging.getLogger("red.creamy.cogs.league")
+log = logging.getLogger("red.creamy-cogs.league")
 
 
 class Blitzcrank(MixinMeta):
@@ -143,37 +143,94 @@ class Blitzcrank(MixinMeta):
             log.exception("No channel setup to announce matches in." + str(e))
 
         # Loop through registered guild members
-        registered_users = await self.config.all_members(channel.guild)
-        for summoner in registered_users:
-            data = registered_users[summoner]
-            basePath, headers = await self.get_riot_url(data["region"])
-            url = f"{basePath}spectator/v4/active-games/by-summoner/{data['summoner_id']}"
+        registered_users = await self.config.all_members(guild=channel.guild)
+        for key, user_data in registered_users.items():
+            member = await self.bot.get_or_fetch_member(channel.guild, key)
+            log.debug(member)
+            basePath, headers = await self.get_riot_url(user_data["region"])
+            url = f"{basePath}spectator/v4/active-games/by-summoner/{user_data['summoner_id']}"
             async with self._session.get(url, headers=headers) as req:
                 try:
-                    data = await req.json()
+                    game_data = await req.json()
                 except aiohttp.ContentTypeError:
-                    data = {}
-
+                    game_data = {}
                 if req.status == 200:
-                    self.user_in_game()
+                    await self.user_in_game(member, user_data, game_data, channel)
                 elif req.status == 404:
-                    self.user_is_not_in_game()
+                    await self.user_is_not_in_game(member, user_data, channel)
                 elif req.status == 401:
                     # Need to raise token error
-                    self.token_unauthorized()
+                    await self.token_unauthorized()
                 else:
                     log.warning = ("Riot API request failed with status code {statusCode}").format(
                         statusCode=req.status
                     )
 
-    async def user_in_game(self):
-        # Need to implement
-        print("foo")
+    async def user_in_game(self, member: discord.Member, user_data, game_data, channel):
+        log.debug("User is in an active game")
+        if not user_data["active_game"]:
+            log.debug("User was not in a game previously.")
+            await self.start_game(member, user_data, game_data, channel)
+        # We are already tracking a game on them.
+        else:
+            tracked_game_data = user_data["active_game"]
+            if game_data["gameId"] == tracked_game_data["gameId"]:
+                log.debug("Skipped record, as we are already tracking this game.")
+            else:
+                log.debug("They are in a different game than what we are tracking.")
+                await self.end_game(member, user_data, channel)
+                await self.start_game(member, user_data, game_data, channel)
 
-    async def user_is_not_in_game(self):
+    async def user_is_not_in_game(self, member: discord.Member, user_data, channel):
         # Need to implement
-        print("foo")
+        if user_data["active_game"]:
+            await self.end_game(member, user_data, channel)
 
-    async def token_unauthorized():
+    async def token_unauthorized(self):
         # Need to implement
-        print("foo")
+        print("foo 2")
+
+    async def start_game(self, member: discord.Member, user_data, game_data, channel):
+        log.debug("Starting game..")
+        if game_data["gameMode"] == "CLASSIC":
+            # If it is a custom, only care if 10 non-bots.
+            playerCount = 0
+            if game_data["gameType"] == "CUSTOM_GAME":
+                for participant in game_data["participants"]:
+                    if not participant["bot"]:
+                        playerCount += 1
+            # FOR DEV TESTING IN CUSTOMS 1v0, swap comment out line below.
+            if (game_data["gameType"] == "MATCHED_GAME") or (
+                game_data["gameType"] == "CUSTOM_GAME"
+            ):
+                currTitle = "Summoner started a game"
+                currMsg = "Blah"
+                currType = "apiSuccess"
+
+                embed = await self.build_embed(title=currTitle, msg=currMsg, _type=currType)
+                message = await channel.send("New game!")
+                await message.edit(embed=embed)
+                try:
+                    await self.config.member(member).active_game.set_raw(
+                        game_data["gameId"],
+                        value={
+                            "gameId": game_data["gameId"],
+                            "startTime": game_data["gameStartTime"],
+                            "active": True,
+                            # "messageId": message.id,
+                            # "guildId": message.guild.id
+                        },
+                    )
+                    log.debug("Set active game")
+                except BaseException as e:
+                    log.debug(e)
+
+    async def end_game(self, member: discord.Member, user_data, channel):
+        log.debug("Ending game...")
+        # gameId = await self.config.member(member).active_game.get_raw("gameId")
+        message = await self.config.member(member).active_game.get_raw("message")
+        newTitle = "game over"
+        embed = self.build_embed(newTitle, message, "apiFail")
+        message.edit(embed=embed)
+        await self.config.member(member).active_game.clear_raw()
+        await channel.send("summoner's game ended")
