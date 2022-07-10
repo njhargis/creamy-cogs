@@ -229,7 +229,12 @@ class Blitzcrank(MixinMeta):
                             if participant["teamId"] == 200:
                                 team200[champId] = champName
                 embed = await self.build_active_game(
-                    user_data["summoner_name"], game_type, liveChampName, team100, team200
+                    user_data["summoner_name"],
+                    game_type,
+                    liveChampName,
+                    team100,
+                    team200,
+                    game_data["gameStartTime"],
                 )
                 message = await channel.send(embed=embed)
                 await self.config.member(member).active_game.set(

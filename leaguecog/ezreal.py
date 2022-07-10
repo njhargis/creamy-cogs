@@ -1,6 +1,8 @@
 import logging
 import discord
 from leaguecog.mixinmeta import MixinMeta
+import roleidentification
+from datetime import datetime, time
 
 log = logging.getLogger("red.creamy-cogs.league")
 
@@ -46,14 +48,25 @@ class Ezreal(MixinMeta):
 
         return embed
 
-    async def build_active_game(self, summoner_name, game_type, champ_name, team1, team2):
+    async def build_active_game(
+        self, summoner_name, game_type, champ_name, team1, team2, timestamp
+    ):
+        log.debug("Building embed")
         embed = discord.Embed()
         embed.title = f"{summoner_name} has started a {game_type} game!"
         embed.color = 0x00FF00
         embed.set_thumbnail(
             url=f"http://ddragon.leagueoflegends.com/cdn/12.12.1/img/champion/{champ_name}.png"
         )
-
+        teamComp1 = ""
+        teamComp2 = ""
+        for champ in team1:
+            teamComp1 = teamComp1 + str(team1[champ]) + " "
+        for champ in team2:
+            teamComp2 = teamComp2 + str(team2[champ]) + " "
+        embed.add_field(name="Blue Team", value=teamComp1)
+        embed.add_field(name="Red Team", value=teamComp2)
+        embed.timestamp = datetime.utcfromtimestamp(timestamp / 1000)
         return embed
 
     async def build_end_game(self, summoner_name, champ_name, team1, team2):
@@ -63,4 +76,5 @@ class Ezreal(MixinMeta):
         embed.set_thumbnail(
             url=f"http://ddragon.leagueoflegends.com/cdn/12.12.1/img/champion/{champ_name}.png"
         )
+        embed.timestamp = datetime.utcnow()
         return embed
