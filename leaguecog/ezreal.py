@@ -45,3 +45,22 @@ class Ezreal(MixinMeta):
             embed.color = GRAY
 
         return embed
+
+    async def build_active_game(self, summoner_name, game_type, champ_name, team1, team2):
+        embed = discord.Embed()
+        embed.title = f"{summoner_name} has started a {game_type} game!"
+        embed.color = 0x00FF00
+        embed.set_thumbnail(
+            url=f"http://ddragon.leagueoflegends.com/cdn/12.12.1/img/champion/{champ_name}.png"
+        )
+
+        return embed
+
+    async def build_end_game(self, summoner_name, champ_name, team1, team2):
+        embed = discord.Embed()
+        embed.title = f"{summoner_name}'s game has ended."
+        embed.color = 0xFF0000
+        embed.set_thumbnail(
+            url=f"http://ddragon.leagueoflegends.com/cdn/12.12.1/img/champion/{champ_name}.png"
+        )
+        return embed

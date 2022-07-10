@@ -146,7 +146,6 @@ class Blitzcrank(MixinMeta):
         registered_users = await self.config.all_members(guild=channel.guild)
         for key, user_data in registered_users.items():
             member = await self.bot.get_or_fetch_member(channel.guild, key)
-            log.debug(member)
             basePath, headers = await self.get_riot_url(user_data["region"])
             url = f"{basePath}spectator/v4/active-games/by-summoner/{user_data['summoner_id']}"
             async with self._session.get(url, headers=headers) as req:
@@ -203,34 +202,57 @@ class Blitzcrank(MixinMeta):
             if (game_data["gameType"] == "MATCHED_GAME") or (
                 game_data["gameType"] == "CUSTOM_GAME"
             ):
-                currTitle = "Summoner started a game"
-                currMsg = "Blah"
-                currType = "apiSuccess"
 
-                embed = await self.build_embed(title=currTitle, msg=currMsg, _type=currType)
-                message = await channel.send("New game!")
-                await message.edit(embed=embed)
-                try:
-                    await self.config.member(member).active_game.set_raw(
-                        game_data["gameId"],
-                        value={
-                            "gameId": game_data["gameId"],
-                            "startTime": game_data["gameStartTime"],
-                            "active": True,
-                            # "messageId": message.id,
-                            # "guildId": message.guild.id
-                        },
-                    )
-                    log.debug("Set active game")
-                except BaseException as e:
-                    log.debug(e)
+                if game_data["gameType"] == "CUSTOM_GAME":
+                    game_type = "custom"
+                elif game_data["gameQueueConfigId"] == 420:
+                    game_type = "ranked solo/duo"
+                elif game_data["gameQueueConfigId"] == 440:
+                    game_type = "ranked flex"
+                elif game_data["gameQueueConfigId"] in (400, 4430):
+                    game_type = "normal"
+                else:
+                    game_type = "unknown type:" + str(game_data["gameQueueConfigId"])
+                champs = self.champlist["data"]
+                team100 = {}
+                team200 = {}
+                for participant in game_data["participants"]:
+                    for i in champs:
+                        loopChamp = champs[i]
+                        if str(loopChamp["key"]) == str(participant["championId"]):
+                            champName = loopChamp["name"]
+                            champId = loopChamp["key"]
+                            if participant["summonerId"] == user_data["summoner_id"]:
+                                liveChampName = champName
+                            if participant["teamId"] == 100:
+                                team100[champId] = champName
+                            if participant["teamId"] == 200:
+                                team200[champId] = champName
+                embed = await self.build_active_game(
+                    user_data["summoner_name"], game_type, liveChampName, team100, team200
+                )
+                message = await channel.send(embed=embed)
+                await self.config.member(member).active_game.set(
+                    value={
+                        "gameId": game_data["gameId"],
+                        "startTime": game_data["gameStartTime"],
+                        "active": True,
+                        "messageId": message.id,
+                        "guildId": message.guild.id,
+                        "champName": liveChampName,
+                        "team100": team100,
+                        "team200": team200,
+                    },
+                )
+                log.debug("Set active game")
 
     async def end_game(self, member: discord.Member, user_data, channel):
         log.debug("Ending game...")
-        # gameId = await self.config.member(member).active_game.get_raw("gameId")
-        message = await self.config.member(member).active_game.get_raw("message")
-        newTitle = "game over"
-        embed = self.build_embed(newTitle, message, "apiFail")
-        message.edit(embed=embed)
+        message_id = await self.config.member(member).active_game.get_raw("messageId")
+        champ_name = await self.config.member(member).active_game.get_raw("champName")
+        team100 = await self.config.member(member).active_game.get_raw("team100")
+        team200 = await self.config.member(member).active_game.get_raw("team200")
+        sent_message = await channel.fetch_message(message_id)
+        embed = await self.build_end_game(user_data["summoner_name"], champ_name, team100, team200)
+        await sent_message.edit(embed=embed)
         await self.config.member(member).active_game.clear_raw()
-        await channel.send("summoner's game ended")

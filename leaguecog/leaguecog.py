@@ -53,7 +53,7 @@ class LeagueCog(
         "summoner_id": "",
         "account_id": "",
         "region": "",
-        "active_game": [],
+        "active_game": {},
     }
 
     def __init__(self, bot: Red):
