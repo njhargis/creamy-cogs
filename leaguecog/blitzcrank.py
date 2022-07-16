@@ -67,16 +67,21 @@ class Blitzcrank(MixinMeta):
         await asyncio.sleep(3)
 
         try:
-            region = self.regions[region.lower()]
+            # region = self.regions[region.lower()]
+            region = region
 
-        except KeyError:
-            # raise a KeyError for bad region, pass title, type, and message to build_embed()
-            #    and send the author a formatted list of available regions
-            currTitle = "Invalid Region"
-            currType = "invalidRegion"
-            currMsg = f"Region {region.upper()} not found. Available regions:\n" + ", ".join(
-                [r.upper() for r in self.regions.keys()]
-            )
+        # Adding this to not break the structure until KeyError logic resolved.
+        except BaseException as e:
+            log.info(e)
+
+        # except KeyError:
+        #    # raise a KeyError for bad region, pass title, type, and message to build_embed()
+        #    #    and send the author a formatted list of available regions
+        #    currTitle = "Invalid Region"
+        #    currType = "invalidRegion"
+        #    currMsg = f"Region {region.upper()} not found. Available regions:\n" + ", ".join(
+        #        [r.upper() for r in self.regions.keys()]
+        #    )
 
         else:
             # build the url as an f-string, can double-check 'name' in the console
@@ -134,36 +139,41 @@ class Blitzcrank(MixinMeta):
     async def check_games(self):
         # Find alert channel
         # Handle no channel set up.
-        try:
-            channelId = await self.config.alertChannel()
-            channel = self.bot.get_channel(channelId)
-            log.debug(f"Found channel {channel}")
-        except BaseException as e:
-            # Need to message owner if no channel is setup.
-            log.exception("No channel setup to announce matches in." + str(e))
-
-        # Loop through registered guild members
-        registered_users = await self.config.all_members(guild=channel.guild)
-        for key, user_data in registered_users.items():
-            member = await self.bot.get_or_fetch_member(channel.guild, key)
-            basePath, headers = await self.get_riot_url(user_data["region"])
-            url = f"{basePath}spectator/v4/active-games/by-summoner/{user_data['summoner_id']}"
-            async with self._session.get(url, headers=headers) as req:
+        log.debug("Looping guilds.")
+        guilds = await self.config.all_guilds()
+        for guildId in guilds:
+            guild = await self.bot.fetch_guild(guildId)
+            poll_matches = await self.config.guild(guild).poll_games()
+            if poll_matches:
                 try:
-                    game_data = await req.json()
-                except aiohttp.ContentTypeError:
-                    game_data = {}
-                if req.status == 200:
-                    await self.user_in_game(member, user_data, game_data, channel)
-                elif req.status == 404:
-                    await self.user_is_not_in_game(member, user_data, channel)
-                elif req.status == 401:
-                    # Need to raise token error
-                    await self.token_unauthorized()
-                else:
-                    log.warning = ("Riot API request failed with status code {statusCode}").format(
-                        statusCode=req.status
-                    )
+                    channelId = await self.config.guild(guild).alertChannel()
+                    channel = self.bot.get_channel(channelId)
+                    log.debug(f"Found channel {channel}")
+                except BaseException as e:
+                    # Need to handle if no channel is setup.
+                    log.exception("No channel setup to announce matches in." + str(e))
+                # Loop through registered guild members
+                registered_users = await self.config.all_members(guild=guild)
+                for key, user_data in registered_users.items():
+                    member = await self.bot.get_or_fetch_member(guild, key)
+                    basePath, headers = await self.get_riot_url(user_data["region"])
+                    url = f"{basePath}spectator/v4/active-games/by-summoner/{user_data['summoner_id']}"
+                    async with self._session.get(url, headers=headers) as req:
+                        try:
+                            game_data = await req.json()
+                        except aiohttp.ContentTypeError:
+                            game_data = {}
+                        if req.status == 200:
+                            await self.user_in_game(member, user_data, game_data, channel)
+                        elif req.status == 404:
+                            await self.user_is_not_in_game(member, user_data, channel)
+                        elif req.status == 401:
+                            # Need to raise token error
+                            await self.token_unauthorized()
+                        else:
+                            log.warning = (
+                                "Riot API request failed with status code {statusCode}"
+                            ).format(statusCode=req.status)
 
     async def user_in_game(self, member: discord.Member, user_data, game_data, channel):
         log.debug("User is in an active game")

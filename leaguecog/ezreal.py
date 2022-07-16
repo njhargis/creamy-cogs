@@ -1,6 +1,6 @@
 import logging
 import discord
-from mixinmeta import MixinMeta
+from .mixinmeta import MixinMeta
 from datetime import datetime
 
 log = logging.getLogger("red.creamy-cogs.league")

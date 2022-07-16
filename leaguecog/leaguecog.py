@@ -42,13 +42,13 @@ class LeagueCog(
 
     default_global_settings = {
         "notified_owner_missing_league_key": False,
-        "poll_games": False,
         # We should dynamically calculate this based on registered summoners to not hit throttle limit.
         "refresh_timer": 30,
     }
 
     default_guild_settings = {
         "default_region": "NA",
+        "alertChannel": "",
     }
 
     default_role_settings = {"mention": False}
@@ -74,7 +74,7 @@ class LeagueCog(
 
         self._session = aiohttp.ClientSession()
         self.champlist = None
-        self.api = None
+        self.api_key = None
         self.regions = {
             # restructuring this as a nested dict avoids constructing extra
             #   lists and dictionaries any time we need region processing
@@ -105,9 +105,8 @@ class LeagueCog(
             log.debug("Updating Riot API Version...")
             # We need to run this more often, but not sure when.
             await self.update_version()
-            if await self.config.poll_games():
-                log.debug("Attempting to start loop..")
-                self.task = self.bot.loop.create_task(self._game_alerts())
+            log.debug("Attempting to start loop..")
+            self.task = self.bot.loop.create_task(self._game_alerts())
         except Exception as error:
             log.exception("Failed to initialize League cog:", exc_info=error)
 
@@ -215,7 +214,7 @@ class LeagueCog(
         )
         await polling_msg.edit(content=ctx.author.mention, embed=polling_embed)
 
-        ### CHOOSE ANNOUCEMENT CHANNEL ###
+        ### CHOOSE ANNOUNCEMENT CHANNEL ###
         # get a dict of all available text channels
         #   this way you can get names and ids in one loop
 
@@ -291,7 +290,7 @@ class LeagueCog(
         channel_embed = await Ezreal.build_embed(
             self,
             title="SETUP - ANNOUNCEMENT CHANNEL",
-            msg=f"Annoucement channel set to #{alert_channel_name}",
+            msg=f"Announcement channel set to #{alert_channel_name}",
         )
         await channel_msg.edit(content=ctx.author.mention, embed=channel_embed)
 
@@ -397,9 +396,8 @@ class LeagueCog(
             [p]leagueset enable-matches
         """
         # Need some logic to make sure a channel is set before allowing this command to run.
-        await self.config.poll_games.set(True)
+        await self.config.guild(ctx.guild).poll_games.set(True)
         await ctx.send("Match tracking enabled.")
-        self.task = self.bot.loop.create_task(self._game_alerts())
 
     @leagueset.command(name="reset")
     async def reset_guild(self, ctx: commands.Context):
