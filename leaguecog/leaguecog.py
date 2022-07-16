@@ -11,7 +11,7 @@ from .blitzcrank import Blitzcrank
 from .ezreal import Ezreal
 
 
-log = logging.getLogger("red.creamy.cogs.league")
+log = logging.getLogger("red.creamy-cogs.league")
 
 
 class CompositeMetaClass(type(commands.Cog), type(ABC)):
@@ -35,16 +35,14 @@ class LeagueCog(
     """
 
     default_global_settings = {
-        # We should dynamically calculate this based on registered summoners to not hit throttle limit.
-        "refresh_timer": 30,
         "notified_owner_missing_league_key": False,
         "poll_games": False,
+        # We should dynamically calculate this based on registered summoners to not hit throttle limit.
+        "refresh_timer": 30,
     }
 
     default_guild_settings = {
         "default_region": "NA",
-        "live_games": {},
-        "registered_summoners": [{}],
     }
 
     default_role_settings = {"mention": False}
@@ -55,6 +53,7 @@ class LeagueCog(
         "summoner_id": "",
         "account_id": "",
         "region": "",
+        "active_game": {},
     }
 
     def __init__(self, bot: Red):
@@ -249,6 +248,7 @@ class LeagueCog(
         Example:
             [p]leagueset enable-matches
         """
+        # Need some logic to make sure a channel is set before allowing this command to run.
         await self.config.poll_games.set(True)
         await ctx.send("Match tracking enabled.")
         self.task = self.bot.loop.create_task(self._game_alerts())
