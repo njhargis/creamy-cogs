@@ -1,6 +1,4 @@
 import asyncio
-from email.message import Message
-import enum
 import logging
 from typing import Optional
 
@@ -133,7 +131,8 @@ class LeagueCog(
             await asyncio.sleep(await self.config.refresh_timer())
 
     def cog_unload(self):
-        """Cancel all pending async tasks when the cog is unloaded."""
+        """Close all sessions all pending async tasks when the cog is unloaded."""
+        asyncio.get_event_loop().create_task(self._session.close())
         if self.task:
             self.task.cancel()
 
