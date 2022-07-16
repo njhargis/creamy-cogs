@@ -48,7 +48,7 @@ class Blitzcrank(MixinMeta):
         """This gets the most recent League API version, then updates our local list of champions"""
         version = await self.simple_get("https://ddragon.leagueoflegends.com/api/versions.json")
         if not self.champ_api_version:
-            self.champ_api_version = version
+            self.champ_api_version = version[0]
             self.champlist = await self.simple_get(
                 f"http://ddragon.leagueoflegends.com/cdn/{version[0]}/data/en_US/champion.json"
             )
@@ -198,11 +198,12 @@ class Blitzcrank(MixinMeta):
                 for participant in game_data["participants"]:
                     if not participant["bot"]:
                         playerCount += 1
-            # FOR DEV TESTING IN CUSTOMS 1v0, swap comment out line below.
+            # FOR DEV TESTING IN CUSTOMS <10 players, comment out line 3 of this if.
             if (game_data["gameType"] == "MATCHED_GAME") or (
-                game_data["gameType"] == "CUSTOM_GAME"
+                game_data["gameType"]
+                == "CUSTOM_GAME"
+                # and playerCount == 10
             ):
-
                 if game_data["gameType"] == "CUSTOM_GAME":
                     game_type = "custom"
                 elif game_data["gameQueueConfigId"] == 420:
