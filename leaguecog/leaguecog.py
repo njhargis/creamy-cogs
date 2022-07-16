@@ -1,11 +1,17 @@
 import asyncio
+from email.message import Message
+import enum
 import logging
 from typing import Optional
+
 import aiohttp
 import discord
 from abc import ABC
 from redbot.core import commands, Config
 from redbot.core.bot import Red
+from redbot.core.utils.menus import start_adding_reactions
+from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
+
 
 from .blitzcrank import Blitzcrank
 from .ezreal import Ezreal
@@ -36,13 +42,13 @@ class LeagueCog(
 
     default_global_settings = {
         "notified_owner_missing_league_key": False,
-        "poll_games": False,
         # We should dynamically calculate this based on registered summoners to not hit throttle limit.
         "refresh_timer": 30,
     }
 
     default_guild_settings = {
         "default_region": "NA",
+        "alertChannel": "",
     }
 
     default_role_settings = {"mention": False}
@@ -57,7 +63,6 @@ class LeagueCog(
     }
 
     def __init__(self, bot: Red):
-        # Red/Config Vars
         self.bot: Red = bot
         self.config = Config.get_conf(self, 8945225427)
         self.config.register_global(**self.default_global_settings)
@@ -65,27 +70,30 @@ class LeagueCog(
         self.config.register_role(**self.default_role_settings)
         self.config.register_member(**self.default_member_settings)
 
-        # Riot API Vars
-        self.api_key = None
         self.champ_api_version = None
+
+        self._session = aiohttp.ClientSession()
         self.champlist = None
+        self.api_key = None
         self.regions = {
-            "br": "br1",
-            "eune": "eun1",
-            "euw": "euw1",
-            "jp": "jp1",
-            "kr": "kr",
-            "lan": "la1",
-            "las": "la2",
-            "na": "na1",
-            "oce": "oc1",
-            "tr": "tr1",
-            "ru": "ru",
-            "pbe": "pbe1",
+            # restructuring this as a nested dict avoids constructing extra
+            #   lists and dictionaries any time we need region processing
+            #       TODO reorder the list based on likely use case
+            #           i.e. NA could probably be closer to the top
+            "br": {"ser": "br1", "emoji": "🇧🇷"},
+            "eune": {"ser": "eun1", "emoji": "🇳🇴"},
+            "euw": {"ser": "euw1", "emoji": "🇪🇺"},
+            "jp": {"ser": "jp1", "emoji": "🇯🇵"},
+            "kr": {"ser": "kr", "emoji": "🇰🇷"},
+            "lan": {"ser": "la1", "emoji": "🇲🇽"},
+            "las": {"ser": "la2", "emoji": "🇦🇷"},
+            "na": {"ser": "na1", "emoji": "🇺🇸"},
+            "oce": {"ser": "oc1", "emoji": "🇦🇺"},
+            "tr": {"ser": "tr1", "emoji": "🇹🇷"},
+            "ru": {"ser": "ru", "emoji": "🇷🇺"},
+            "pbe": {"ser": "pbe1", "emoji": "🇧"},
         }
 
-        # Cog Logic Vars
-        self._session = aiohttp.ClientSession()
         self.task: Optional[asyncio.Task] = None
         self._ready_event: asyncio.Event = asyncio.Event()
         self._init_task: asyncio.Task = self.bot.loop.create_task(self.initialize())
@@ -97,9 +105,8 @@ class LeagueCog(
             log.debug("Updating Riot API Version...")
             # We need to run this more often, but not sure when.
             await self.update_version()
-            if await self.config.poll_games():
-                log.debug("Attempting to start loop..")
-                self.task = self.bot.loop.create_task(self._game_alerts())
+            log.debug("Attempting to start loop..")
+            self.task = self.bot.loop.create_task(self._game_alerts())
         except Exception as error:
             log.exception("Failed to initialize League cog:", exc_info=error)
 
@@ -110,7 +117,7 @@ class LeagueCog(
         """This will listen for updates to api tokens and update cog instance of league token if it changed"""
         log.debug("Tokens updated.")
         if service_name == "league":
-            self.api_key = api_tokens["api_key"]
+            self.api = api_tokens["api_key"]
             log.debug("Local key updated.")
 
     async def cog_before_invoke(self, ctx: commands.Context):
@@ -126,8 +133,7 @@ class LeagueCog(
             await asyncio.sleep(await self.config.refresh_timer())
 
     def cog_unload(self):
-        """Close all sessions all pending async tasks when the cog is unloaded."""
-        asyncio.get_event_loop().create_task(self._session.close())
+        """Cancel all pending async tasks when the cog is unloaded."""
         if self.task:
             self.task.cancel()
 
@@ -138,15 +144,156 @@ class LeagueCog(
     @league.command(name="setup")
     async def setup_cog(self, ctx: commands.Context):
         """
-        Returns a user's summoner name.
-        If you do not enter a username, returns your own.
+        Guides the user through setting up different cog settings
+
+        NOTE this is in dire need of refactoring
+
+        For example, I think it would be reasonable to define these predicates
+        as different functions, as this would enable us to let users go back
+        and reset different settings individually later on with something like
+        "[p]league setup --region"
         """
-        # Set if they want to poll live games.
-        # Set guild region
-        # Set announcement channel
-        # Setup Riot API key and request a permanent one.
-        # Might be helpful example: https://github.com/Cog-Creators/Red-DiscordBot/blob/V3/develop/redbot/cogs/streams/streams.py#L122
-        # You also could bot.send_to_owners if self.api_key is not set.
+
+        ### SET REGION ###
+        region_embed = await Ezreal.build_embed(
+            self,
+            title="SETUP - REGION",
+            msg="React with the flag that most closely represents your region",
+        )
+        region_msg = await ctx.send(embed=region_embed)
+        region_emojis = [v["emoji"] for v in self.regions.values()]
+
+        # set up a ReactionPredicate and interpret the response
+        #   then index the server (ex. 'na1') and abbreviation (ex. 'na')
+        start_adding_reactions(region_msg, region_emojis)
+        region_pred = ReactionPredicate.with_emojis(region_emojis, region_msg, ctx.author)
+        await ctx.bot.wait_for("reaction_add", check=region_pred)
+
+        region_idx = region_pred.result
+        ser = [v["ser"] for v in self.regions.values()][region_idx]
+        region = [k for k in self.regions.keys()][region_idx]
+
+        log.info(f"SETUP ser == {ser}, region == {region}")
+
+        # set guild region
+        await self.config.guild(ctx.guild).default_region.set(region.upper())
+        log.info(
+            f"SETUP self.config.guild(ctx.guild).default_region() == {await self.config.guild(ctx.guild).default_region()}"
+        )
+
+        # TODO remove reactions
+
+        # edit the original embed and show the user what was selected
+        region_embed = await Ezreal.build_embed(
+            self, title="SETUP - REGION", msg=f"Region set to {region.upper()}"
+        )
+        await region_msg.edit(content=ctx.author.mention, embed=region_embed)
+
+        ### ENABLE POLLING OR LEAVE OFF ###
+        polling_embed = await Ezreal.build_embed(
+            self, title="SETUP - POLLING", msg="Do you want to poll for live games?"
+        )
+        polling_msg = await ctx.send(embed=polling_embed)
+
+        # set up a ReactionPredicate and interpret the response
+        #   built-in method .yes_or_no() can interpret True/False
+        start_adding_reactions(polling_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+        polling_pred = ReactionPredicate.yes_or_no(polling_msg, ctx.author)
+        await ctx.bot.wait_for("reaction_add", check=polling_pred)
+
+        if polling_pred.result is True:
+            await self.config.guild(ctx.guild).poll_games.set(True)
+
+        log.info(
+            f"SETUP self.config.guild(ctx.guild).poll_games() == {await self.config.guild(ctx.guild).poll_games()}"
+        )
+        # TODO remove reactions
+        # edit the original embed and show the user what was selected
+        polling_embed = await Ezreal.build_embed(
+            self, title="SETUP - POLLING", msg=f"Polling live games set to {polling_pred.result}"
+        )
+        await polling_msg.edit(content=ctx.author.mention, embed=polling_embed)
+
+        ### CHOOSE ANNOUNCEMENT CHANNEL ###
+        # get a dict of all available text channels
+        #   this way you can get names and ids in one loop
+
+        text_channel_dict = {}
+        for guild in self.bot.guilds:
+            for channel in guild.text_channels:
+                text_channel_dict[channel.name] = channel.id
+
+        # if number of channels is <= 10, can use a reaction predicate with the number emojis
+        #   otherwise, catch an IndexError for the list of emojis and let the user
+        #       input the name or number of the channel they want to use
+
+        msg = "What channel do you want to use for announcements?\n"
+        if len(text_channel_dict) <= 10:
+            # only get the number of emojis you need to number the channels
+            number_emojis = ReactionPredicate.NUMBER_EMOJIS[: len(text_channel_dict)]
+
+            msg += "React with the appropriate channel number:\n\n"
+
+            # number the channels within the embed message with the emojis
+            for emoji, channel in zip(number_emojis, text_channel_dict.keys()):
+                msg += f"{emoji} {channel}\n"
+
+            channel_embed = await Ezreal.build_embed(
+                self,
+                title="SETUP - ANNOUNCEMENT CHANNEL",
+                msg=msg,
+            )
+            channel_msg = await ctx.send(embed=channel_embed)
+
+            # set up a ReactionPredicate and index text_channel_dict based on response
+            start_adding_reactions(channel_msg, number_emojis)
+            channel_pred = ReactionPredicate.with_emojis(number_emojis, channel_msg, ctx.author)
+            await ctx.bot.wait_for("reaction_add", check=channel_pred)
+
+        else:
+            # add code blocking for looks
+            msg += "Input the appropriate channel number:\n```"
+            for idx, ch in enumerate(text_channel_dict.keys()):
+                msg += f"{idx}. {ch}\n"
+            msg += "```"
+            channel_embed = await Ezreal.build_embed(
+                self,
+                title="SETUP - ANNOUNCEMENT CHANNEL",
+                msg=msg,
+            )
+            channel_msg = await ctx.send(embed=channel_embed)
+            # make sure the response is an integer that corresponds to a channel
+            #   but MessagePredicate will read these as strings, not ints
+            channel_pred = MessagePredicate.contained_in(
+                [str(i) for i in range(len(text_channel_dict))]
+            )
+            await ctx.bot.wait_for("message", check=channel_pred)
+
+        # index the channel name and id from the dict
+        channel_idx = channel_pred.result
+        alert_channel_name = [k for k in text_channel_dict.keys()][channel_idx]
+        alert_channel_id = text_channel_dict[alert_channel_name]
+
+        log.info(f"SETUP channel_pred.result == {channel_pred.result}")
+        log.info(f"SETUP alert_channel_name = {alert_channel_name}")
+        log.info(f"SETUP alert_channel_id == {alert_channel_id}")
+
+        # set the alert channel via channel id
+        await self.config.guild(ctx.guild).alertChannel.set(alert_channel_id)
+        log.info(
+            f"SETUP self.config.guild(ctx.guild).alertChannel() == {await self.config.guild(ctx.guild).alertChannel()}"
+        )
+
+        # TODO remove reactions, or remove last message if had to get text input
+
+        # edit the original embed and show the user which channel was selected
+        channel_embed = await Ezreal.build_embed(
+            self,
+            title="SETUP - ANNOUNCEMENT CHANNEL",
+            msg=f"Announcement channel set to #{alert_channel_name}",
+        )
+        await channel_msg.edit(content=ctx.author.mention, embed=channel_embed)
+
         return
 
     @league.command(name="summoner")
@@ -249,9 +396,8 @@ class LeagueCog(
             [p]leagueset enable-matches
         """
         # Need some logic to make sure a channel is set before allowing this command to run.
-        await self.config.poll_games.set(True)
+        await self.config.guild(ctx.guild).poll_games.set(True)
         await ctx.send("Match tracking enabled.")
-        self.task = self.bot.loop.create_task(self._game_alerts())
 
     @leagueset.command(name="reset")
     async def reset_guild(self, ctx: commands.Context):

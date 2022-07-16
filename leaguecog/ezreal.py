@@ -1,8 +1,7 @@
 import logging
 import discord
-from leaguecog.mixinmeta import MixinMeta
-import roleidentification
-from datetime import datetime, time
+from .mixinmeta import MixinMeta
+from datetime import datetime
 
 log = logging.getLogger("red.creamy-cogs.league")
 
@@ -14,7 +13,7 @@ class Ezreal(MixinMeta):
     This class is responsible for handling chat interactions with Discord.
     """
 
-    async def build_embed(self, title, msg, _type):
+    async def build_embed(self, title=None, msg=None, _type=None):
         embed = discord.Embed()
 
         if title:
