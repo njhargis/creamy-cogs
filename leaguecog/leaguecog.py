@@ -5,7 +5,7 @@ from typing import Optional
 import aiohttp
 import discord
 from abc import ABC
-from redbot.core import commands, Config
+from redbot.core import checks, commands, Config
 from redbot.core.bot import Red
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
@@ -116,6 +116,8 @@ class LeagueCog(
         log.debug("Tokens updated.")
         if service_name == "league":
             self.api = api_tokens["api_key"]
+            await self.config.notified_owner_missing_league_key.set(False)
+            self.task = self.bot.loop.create_task(self._game_alerts())
             log.debug("Local key updated.")
 
     async def cog_before_invoke(self, ctx: commands.Context):
@@ -141,6 +143,8 @@ class LeagueCog(
         """Base command to interact with the League Cog."""
 
     @league.command(name="setup")
+    @commands.guild_only()
+    @checks.mod_or_permissions(manage_channels=True)
     async def setup_cog(self, ctx: commands.Context):
         """
         Guides the user through setting up different cog settings
@@ -296,6 +300,7 @@ class LeagueCog(
         return
 
     @league.command(name="summoner")
+    @commands.guild_only()
     async def get_summoner(self, ctx: commands.Context, member: discord.Member = None):
         """
         Returns a user's summoner name.
@@ -320,11 +325,8 @@ class LeagueCog(
         else:
             await ctx.send(f"Your summoner name is {name}, located in {region}.")
 
-    @commands.group()
-    async def leagueset(self, ctx: commands.Context):
-        """Base command to manage League settings"""
-
-    @leagueset.command(name="summoner")
+    @league.command(name="set-summoner")
+    @commands.guild_only()
     async def set_summoner(self, ctx: commands.Context, name: str = "", region: str = None):
         """
         This sets a summoner name to your Discord account.
@@ -349,7 +351,13 @@ class LeagueCog(
         # See if summoner name exists on that region.
         await self.get_summoner_info(ctx, name, member, region, True)
 
+    @commands.group()
+    async def leagueset(self, ctx: commands.Context):
+        """Base command to manage League settings"""
+
     @leagueset.command(name="other-summoner")
+    @commands.guild_only()
+    @checks.mod_or_permissions()
     async def set_other_summoner(
         self, ctx: commands.Context, member: discord.Member, name: str = "", region: str = None
     ):
@@ -376,6 +384,8 @@ class LeagueCog(
         await self.get_summoner_info(ctx, name, member, region, False)
 
     @leagueset.command(name="channel")
+    @commands.guild_only()
+    @checks.mod_or_permissions(manage_channels=True)
     async def set_channel(self, ctx: commands.Context):
         """
         Call this command in the channel you want announcements for new games in.
@@ -387,6 +397,8 @@ class LeagueCog(
         await ctx.send("Channel set.")
 
     @leagueset.command(name="enable-matches")
+    @commands.guild_only()
+    @checks.mod_or_permissions(manage_channels=True)
     async def enable_matches(self, ctx: commands.Context):
         """
         Call this command once channel is setup and you are ready for matches to begin polling.
@@ -399,6 +411,7 @@ class LeagueCog(
         await ctx.send("Match tracking enabled.")
 
     @leagueset.command(name="reset")
+    @checks.is_owner()
     async def reset_guild(self, ctx: commands.Context):
         """
         This clears out the database for the cog.
@@ -411,6 +424,7 @@ class LeagueCog(
         await ctx.send("Data cleared.")
 
     @leagueset.command(name="update")
+    @checks.is_owner()
     async def update_version_data(self, ctx: commands.Context):
         """
         If League of Legends updates this will get new champion data.
@@ -420,3 +434,37 @@ class LeagueCog(
         """
         await self.update_version()
         await ctx.send("Version patched.")
+
+    @leagueset.command(name="league-token")
+    @checks.is_owner()
+    async def league_token(self, ctx: commands.Context):
+        """Explain how to get and set the Riot token."""
+        message = (
+            "To set the Riot API tokens, follow these steps:\n"
+            "1. Go to this page: https://developer.riotgames.com\n"
+            "2. Click *Login* in the top right, using your riot credentials.\n"
+            "3. Click register product, and then register for a Personal API Key.\n"
+            "*DO NOT REGISTER FOR A PRODUCTION API KEY*\n"
+            "4. Agree to their terms (read them!)\n"
+            "5. Enter your bot name in *Product Name*.\n"
+            "6. Put a simple description in the product description:\n"
+            'Something like: "My bot is a Discord bot build using Red that'
+            " will leverage the league cog to poll when anyone in our small Discord"
+            ' starts up a match, and then announce when they win or lose."\n'
+            "7. Leave *Product Group* as Default Group.\n"
+            "8. Don't enter anything into the *Product URL*\n"
+            "9. Set 'League of Legends' as the *Product Game Focus*\n"
+            "THIS APPLICATION CAN TAKE A WHILE (up to months) TO GET APPROVED BY RIOT.\n"
+            "They do not notify you when it completes, so check back often by logging in "
+            "to the portal and then clicking your name -> Apps in the top right.\n"
+            "{command}"
+            "\n\n"
+            "Note: These tokens are sensitive and should only be used in a private channel\n"
+            "or in DM with the bot.\n"
+        ).format(
+            command="`{}set api league api_key {}`".format(
+                ctx.clean_prefix, ("<your_riot_api_key_here>")
+            )
+        )
+
+        await ctx.maybe_send_embed(message)
