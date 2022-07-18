@@ -1,15 +1,14 @@
+from abc import ABC
 import asyncio
 import logging
 from typing import Optional
 
 import aiohttp
 import discord
-from abc import ABC
 from redbot.core import checks, commands, Config
 from redbot.core.bot import Red
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
-
 
 from .blitzcrank import Blitzcrank
 from .ezreal import Ezreal
