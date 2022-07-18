@@ -166,7 +166,9 @@ class LeagueCog(
         # set up a ReactionPredicate and interpret the response
         #   then index the server (ex. 'na1') and abbreviation (ex. 'na')
         start_adding_reactions(region_msg, region_emojis)
-        region_pred = ReactionPredicate.with_emojis(region_emojis, region_msg, ctx.author)
+        region_pred = ReactionPredicate.with_emojis(
+            region_emojis, region_msg, ctx.author
+        )
         await ctx.bot.wait_for("reaction_add", check=region_pred)
 
         region_idx = region_pred.result
@@ -210,7 +212,9 @@ class LeagueCog(
         # TODO remove reactions
         # edit the original embed and show the user what was selected
         polling_embed = await Ezreal.build_embed(
-            self, title="SETUP - POLLING", msg=f"Polling live games set to {polling_pred.result}"
+            self,
+            title="SETUP - POLLING",
+            msg=f"Polling live games set to {polling_pred.result}",
         )
         await polling_msg.edit(content=ctx.author.mention, embed=polling_embed)
 
@@ -247,7 +251,9 @@ class LeagueCog(
 
             # set up a ReactionPredicate and index text_channel_dict based on response
             start_adding_reactions(channel_msg, number_emojis)
-            channel_pred = ReactionPredicate.with_emojis(number_emojis, channel_msg, ctx.author)
+            channel_pred = ReactionPredicate.with_emojis(
+                number_emojis, channel_msg, ctx.author
+            )
             await ctx.bot.wait_for("reaction_add", check=channel_pred)
 
         else:
@@ -324,7 +330,9 @@ class LeagueCog(
 
     @league.command(name="set-summoner")
     @commands.guild_only()
-    async def set_summoner(self, ctx: commands.Context, name: str = "", region: str = None):
+    async def set_summoner(
+        self, ctx: commands.Context, name: str = "", region: str = None
+    ):
         """
         This sets a summoner name to your Discord account.
         Names with spaces must be enclosed in "quotes". Region is optional.
@@ -356,7 +364,11 @@ class LeagueCog(
     @commands.guild_only()
     @checks.mod_or_permissions()
     async def set_other_summoner(
-        self, ctx: commands.Context, member: discord.Member, name: str = "", region: str = None
+        self,
+        ctx: commands.Context,
+        member: discord.Member,
+        name: str = "",
+        region: str = None,
     ):
         """
         This sets a summoner name to a Discord account. This should be deprecated eventually, but helpful for testing multiple user's.
