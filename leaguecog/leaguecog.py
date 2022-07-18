@@ -77,14 +77,14 @@ class LeagueCog(
             #   lists and dictionaries any time we need region processing
             #       TODO reorder the list based on likely use case
             #           i.e. NA could probably be closer to the top
-            "br": {"ser": "br1", "emoji": "🇧🇷"},
-            "eune": {"ser": "eun1", "emoji": "🇳🇴"},
+            "na": {"ser": "na1", "emoji": "🇺🇸"},
             "euw": {"ser": "euw1", "emoji": "🇪🇺"},
+            "eune": {"ser": "eun1", "emoji": "🇳🇴"},
+            "lan": {"ser": "la1", "emoji": "🇲🇽"},
+            "br": {"ser": "br1", "emoji": "🇧🇷"},
+            "las": {"ser": "la2", "emoji": "🇦🇷"},
             "jp": {"ser": "jp1", "emoji": "🇯🇵"},
             "kr": {"ser": "kr", "emoji": "🇰🇷"},
-            "lan": {"ser": "la1", "emoji": "🇲🇽"},
-            "las": {"ser": "la2", "emoji": "🇦🇷"},
-            "na": {"ser": "na1", "emoji": "🇺🇸"},
             "oce": {"ser": "oc1", "emoji": "🇦🇺"},
             "tr": {"ser": "tr1", "emoji": "🇹🇷"},
             "ru": {"ser": "ru", "emoji": "🇷🇺"},
