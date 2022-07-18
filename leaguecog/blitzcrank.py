@@ -109,21 +109,16 @@ class Blitzcrank(MixinMeta):
         await asyncio.sleep(3)
 
         try:
-            # region = self.regions[region.lower()]
-            region = region
+            region = self.regions[region.lower()]["ser"]
 
-        # Adding this to not break the structure until KeyError logic resolved.
-        except BaseException as e:
-            log.info(e)
-
-        # except KeyError:
-        #    # raise a KeyError for bad region, pass title, type, and message to build_embed()
-        #    #    and send the author a formatted list of available regions
-        #    currTitle = "Invalid Region"
-        #    currType = "invalidRegion"
-        #    currMsg = f"Region {region.upper()} not found. Available regions:\n" + ", ".join(
-        #        [r.upper() for r in self.regions.keys()]
-        #    )
+        except KeyError:
+            # raise a KeyError for bad region, pass title, type, and message to build_embed()
+            #    and send the author a formatted list of available regions
+            currTitle = "Invalid Region"
+            currType = "invalidRegion"
+            currMsg = f"Region {region.upper()} not found. Available regions:\n" + ", ".join(
+                [r.upper() for r in self.regions.keys()]
+            )
 
         else:
             # build the url as an f-string, can double-check 'name' in the console
