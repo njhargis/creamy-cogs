@@ -75,8 +75,6 @@ class LeagueCog(
         self.regions = {
             # restructuring this as a nested dict avoids constructing extra
             #   lists and dictionaries any time we need region processing
-            #       TODO reorder the list based on likely use case
-            #           i.e. NA could probably be closer to the top
             "na": {"ser": "na1", "emoji": "🇺🇸"},
             "euw": {"ser": "euw1", "emoji": "🇪🇺"},
             "eune": {"ser": "eun1", "emoji": "🇳🇴"},
