@@ -175,13 +175,8 @@ class LeagueCog(
         ser = [v["ser"] for v in self.regions.values()][region_idx]
         region = [k for k in self.regions.keys()][region_idx]
 
-        log.info(f"SETUP ser == {ser}, region == {region}")
-
         # set guild region
         await self.config.guild(ctx.guild).default_region.set(region.upper())
-        log.info(
-            f"SETUP self.config.guild(ctx.guild).default_region() == {await self.config.guild(ctx.guild).default_region()}"
-        )
 
         # TODO remove reactions
 
@@ -206,10 +201,8 @@ class LeagueCog(
         if polling_pred.result is True:
             await self.config.guild(ctx.guild).poll_games.set(True)
 
-        log.info(
-            f"SETUP self.config.guild(ctx.guild).poll_games() == {await self.config.guild(ctx.guild).poll_games()}"
-        )
         # TODO remove reactions
+
         # edit the original embed and show the user what was selected
         polling_embed = await Ezreal.build_embed(
             self,
@@ -280,15 +273,8 @@ class LeagueCog(
         alert_channel_name = [k for k in text_channel_dict.keys()][channel_idx]
         alert_channel_id = text_channel_dict[alert_channel_name]
 
-        log.info(f"SETUP channel_pred.result == {channel_pred.result}")
-        log.info(f"SETUP alert_channel_name = {alert_channel_name}")
-        log.info(f"SETUP alert_channel_id == {alert_channel_id}")
-
         # set the alert channel via channel id
         await self.config.guild(ctx.guild).alertChannel.set(alert_channel_id)
-        log.info(
-            f"SETUP self.config.guild(ctx.guild).alertChannel() == {await self.config.guild(ctx.guild).alertChannel()}"
-        )
 
         # TODO remove reactions, or remove last message if had to get text input
 
