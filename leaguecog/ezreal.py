@@ -12,7 +12,7 @@ class Ezreal(MixinMeta):
     """
     'Lot of good mages out there. None of them are this hot!'
 
-    This class is responsible for handling chat interactions with Discord.
+    This class is responsible for handling chat interactions with Discord.!
     """
 
     async def build_embed(self, title=None, msg=None, _type=None):

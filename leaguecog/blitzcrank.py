@@ -19,7 +19,7 @@ class Blitzcrank(MixinMeta):
 
     This class is responsible for:
         1) handling the token for Riot API.
-        2) grabbing and pulling data from Riot API.
+        2) grabbing and pulling data from Riot API.!
     """
 
     async def check_token(self):
@@ -70,11 +70,7 @@ class Blitzcrank(MixinMeta):
             "\n\n"
             "Note: These tokens are sensitive and should only be used in a private channel\n"
             "or in DM with the bot.\n"
-        ).format(
-            command="`{}set api league api_key {}`".format(
-                "!", ("<your_riot_api_key_here>")
-            )
-        )
+        ).format(command="`{}set api league api_key {}`".format("!", ("<your_riot_api_key_here>")))
         if self.task:
             self.task.cancel()
         try:
@@ -94,9 +90,7 @@ class Blitzcrank(MixinMeta):
 
     async def update_version(self):
         """This gets the most recent League API version, then updates our local list of champions"""
-        version = await self.simple_get(
-            "https://ddragon.leagueoflegends.com/api/versions.json"
-        )
+        version = await self.simple_get("https://ddragon.leagueoflegends.com/api/versions.json")
         if not self.champ_api_version:
             self.champ_api_version = version[0]
             self.champlist = await self.simple_get(
@@ -124,9 +118,8 @@ class Blitzcrank(MixinMeta):
             #    and send the author a formatted list of available regions
             currTitle = "Invalid Region"
             currType = "invalidRegion"
-            currMsg = (
-                f"Region {region.upper()} not found. Available regions:\n"
-                + ", ".join([r.upper() for r in self.regions.keys()])
+            currMsg = f"Region {region.upper()} not found. Available regions:\n" + ", ".join(
+                [r.upper() for r in self.regions.keys()]
             )
 
         else:
@@ -171,7 +164,9 @@ class Blitzcrank(MixinMeta):
                         currTitle = "Registration Failure"
                         currType = "apiFail"
                         if req.status == 404:
-                            currMsg = f"Summoner '{name}' does not exist in the region {region.upper()}."
+                            currMsg = (
+                                f"Summoner '{name}' does not exist in the region {region.upper()}."
+                            )
                         elif req.status == 401 or req.status == 403:
                             currTitle = "Invalid Token"
                             currType = "apiFail"
@@ -180,9 +175,7 @@ class Blitzcrank(MixinMeta):
                         else:
                             currTitle = "Unexpected Error"
                             currType = "apiFail"
-                            currMsg = (
-                                f"Riot API request failed with status code {req.status}"
-                            )
+                            currMsg = f"Riot API request failed with status code {req.status}"
             else:
                 currTitle = "Invalid Token"
                 currType = "apiFail"
@@ -221,13 +214,9 @@ class Blitzcrank(MixinMeta):
                             except aiohttp.ContentTypeError:
                                 game_data = {}
                             if req.status == 200:
-                                await self.user_in_game(
-                                    member, user_data, game_data, channel
-                                )
+                                await self.user_in_game(member, user_data, game_data, channel)
                             elif req.status == 404:
-                                await self.user_is_not_in_game(
-                                    member, user_data, channel
-                                )
+                                await self.user_is_not_in_game(member, user_data, channel)
                             elif req.status == 401 or req.status == 403:
                                 await self.token_expired_or_missing()
                             else:
@@ -327,8 +316,6 @@ class Blitzcrank(MixinMeta):
         team100 = await self.config.member(member).active_game.get_raw("team100")
         team200 = await self.config.member(member).active_game.get_raw("team200")
         sent_message = await channel.fetch_message(message_id)
-        embed = await self.build_end_game(
-            user_data["summoner_name"], champ_name, team100, team200
-        )
+        embed = await self.build_end_game(user_data["summoner_name"], champ_name, team100, team200)
         await sent_message.edit(embed=embed)
         await self.config.member(member).active_game.clear_raw()
