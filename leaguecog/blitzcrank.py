@@ -192,7 +192,7 @@ class Blitzcrank(MixinMeta):
             poll_matches = await self.config.guild(guild).poll_games()
             if poll_matches:
                 try:
-                    channelId = await self.config.guild(guild).alertChannel()
+                    channelId = await self.config.guild(guild).alert_channel()
                     channel = self.bot.get_channel(channelId)
                     log.debug(f"Found channel {channel}")
                 except BaseException as e:
@@ -265,7 +265,7 @@ class Blitzcrank(MixinMeta):
                     game_type = "ranked solo/duo"
                 elif game_data["gameQueueConfigId"] == 440:
                     game_type = "ranked flex"
-                elif game_data["gameQueueConfigId"] in (400, 4430):
+                elif game_data["gameQueueConfigId"] in (400, 430):
                     game_type = "normal"
                 else:
                     game_type = "unknown type:" + str(game_data["gameQueueConfigId"])
@@ -305,6 +305,16 @@ class Blitzcrank(MixinMeta):
                         "team200": team200,
                     },
                 )
+                # await self.config.guild(channel.guild).posted_games.set(
+                #    value = {
+                #        "id": game_data["gameId"] + user_data["summoner_id"]
+                #    },
+                # )
+                try:
+                    async with self.config.guild(channel.guild).posted_games() as games:
+                        games.append(game_data["gameId"] + user_data["summoner_id"])
+                except BaseException as e:
+                    log.debug(e)
                 log.debug("Set active game")
 
     async def end_game(self, member: discord.Member, user_data, channel):
