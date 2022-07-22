@@ -166,13 +166,10 @@ class LeagueCog(
         # set up a ReactionPredicate and interpret the response
         #   then index the server (ex. 'na1') and abbreviation (ex. 'na')
         start_adding_reactions(region_msg, region_emojis)
-        region_pred = ReactionPredicate.with_emojis(
-            region_emojis, region_msg, ctx.author
-        )
+        region_pred = ReactionPredicate.with_emojis(region_emojis, region_msg, ctx.author)
         await ctx.bot.wait_for("reaction_add", check=region_pred)
 
         region_idx = region_pred.result
-        ser = [v["ser"] for v in self.regions.values()][region_idx]
         region = [k for k in self.regions.keys()][region_idx]
 
         # set guild region
@@ -244,9 +241,7 @@ class LeagueCog(
 
             # set up a ReactionPredicate and index text_channel_dict based on response
             start_adding_reactions(channel_msg, number_emojis)
-            channel_pred = ReactionPredicate.with_emojis(
-                number_emojis, channel_msg, ctx.author
-            )
+            channel_pred = ReactionPredicate.with_emojis(number_emojis, channel_msg, ctx.author)
             await ctx.bot.wait_for("reaction_add", check=channel_pred)
 
         else:
@@ -316,9 +311,7 @@ class LeagueCog(
 
     @league.command(name="set-summoner")
     @commands.guild_only()
-    async def set_summoner(
-        self, ctx: commands.Context, name: str = "", region: str = None
-    ):
+    async def set_summoner(self, ctx: commands.Context, name: str = "", region: str = None):
         """
         This sets a summoner name to your Discord account.
         Names with spaces must be enclosed in "quotes". Region is optional.
