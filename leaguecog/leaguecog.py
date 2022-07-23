@@ -1,15 +1,14 @@
+from abc import ABC
 import asyncio
 import logging
 from typing import Optional
 
 import aiohttp
 import discord
-from abc import ABC
 from redbot.core import checks, commands, Config
 from redbot.core.bot import Red
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
-
 
 from .blitzcrank import Blitzcrank
 from .ezreal import Ezreal
@@ -76,16 +75,14 @@ class LeagueCog(
         self.regions = {
             # restructuring this as a nested dict avoids constructing extra
             #   lists and dictionaries any time we need region processing
-            #       TODO reorder the list based on likely use case
-            #           i.e. NA could probably be closer to the top
-            "br": {"ser": "br1", "emoji": "🇧🇷"},
-            "eune": {"ser": "eun1", "emoji": "🇳🇴"},
+            "na": {"ser": "na1", "emoji": "🇺🇸"},
             "euw": {"ser": "euw1", "emoji": "🇪🇺"},
+            "eune": {"ser": "eun1", "emoji": "🇳🇴"},
+            "lan": {"ser": "la1", "emoji": "🇲🇽"},
+            "br": {"ser": "br1", "emoji": "🇧🇷"},
+            "las": {"ser": "la2", "emoji": "🇦🇷"},
             "jp": {"ser": "jp1", "emoji": "🇯🇵"},
             "kr": {"ser": "kr", "emoji": "🇰🇷"},
-            "lan": {"ser": "la1", "emoji": "🇲🇽"},
-            "las": {"ser": "la2", "emoji": "🇦🇷"},
-            "na": {"ser": "na1", "emoji": "🇺🇸"},
             "oce": {"ser": "oc1", "emoji": "🇦🇺"},
             "tr": {"ser": "tr1", "emoji": "🇹🇷"},
             "ru": {"ser": "ru", "emoji": "🇷🇺"},
@@ -173,16 +170,10 @@ class LeagueCog(
         await ctx.bot.wait_for("reaction_add", check=region_pred)
 
         region_idx = region_pred.result
-        ser = [v["ser"] for v in self.regions.values()][region_idx]
         region = [k for k in self.regions.keys()][region_idx]
-
-        log.info(f"SETUP ser == {ser}, region == {region}")
 
         # set guild region
         await self.config.guild(ctx.guild).default_region.set(region.upper())
-        log.info(
-            f"SETUP self.config.guild(ctx.guild).default_region() == {await self.config.guild(ctx.guild).default_region()}"
-        )
 
         # TODO remove reactions
 
@@ -207,13 +198,13 @@ class LeagueCog(
         if polling_pred.result is True:
             await self.config.guild(ctx.guild).poll_games.set(True)
 
-        log.info(
-            f"SETUP self.config.guild(ctx.guild).poll_games() == {await self.config.guild(ctx.guild).poll_games()}"
-        )
         # TODO remove reactions
+
         # edit the original embed and show the user what was selected
         polling_embed = await Ezreal.build_embed(
-            self, title="SETUP - POLLING", msg=f"Polling live games set to {polling_pred.result}"
+            self,
+            title="SETUP - POLLING",
+            msg=f"Polling live games set to {polling_pred.result}",
         )
         await polling_msg.edit(content=ctx.author.mention, embed=polling_embed)
 
@@ -277,15 +268,8 @@ class LeagueCog(
         alert_channel_name = [k for k in text_channel_dict.keys()][channel_idx]
         alert_channel_id = text_channel_dict[alert_channel_name]
 
-        log.info(f"SETUP channel_pred.result == {channel_pred.result}")
-        log.info(f"SETUP alert_channel_name = {alert_channel_name}")
-        log.info(f"SETUP alert_channel_id == {alert_channel_id}")
-
         # set the alert channel via channel id
         await self.config.guild(ctx.guild).alertChannel.set(alert_channel_id)
-        log.info(
-            f"SETUP self.config.guild(ctx.guild).alertChannel() == {await self.config.guild(ctx.guild).alertChannel()}"
-        )
 
         # TODO remove reactions, or remove last message if had to get text input
 
@@ -359,7 +343,11 @@ class LeagueCog(
     @commands.guild_only()
     @checks.mod_or_permissions()
     async def set_other_summoner(
-        self, ctx: commands.Context, member: discord.Member, name: str = "", region: str = None
+        self,
+        ctx: commands.Context,
+        member: discord.Member,
+        name: str = "",
+        region: str = None,
     ):
         """
         This sets a summoner name to a Discord account. This should be deprecated eventually, but helpful for testing multiple user's.
