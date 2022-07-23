@@ -1,12 +1,14 @@
 import asyncio
-from lib2to3.pytree import Base
 import logging
-from xml.dom import NotFoundErr
+
 import aiohttp
 import discord
+from lib2to3.pytree import Base
 from redbot.core import Config
+from xml.dom import NotFoundErr
 
 from .mixinmeta import MixinMeta
+
 
 log = logging.getLogger("red.creamy-cogs.league")
 
