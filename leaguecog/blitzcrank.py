@@ -284,18 +284,21 @@ class Blitzcrank(MixinMeta):
                         for i in champs:
                             loopChamp = champs[i]
                             if str(loopChamp["key"]) == str(participant["championId"]):
+                                champId = loopChamp["id"]
                                 champName = loopChamp["name"]
-                                champId = loopChamp["key"]
+                                champKey = loopChamp["key"]
                                 if participant["summonerId"] == user_data["summoner_id"]:
                                     liveChampName = champName
+                                    liveChampId = champId
                                 if participant["teamId"] == 100:
-                                    team100[champId] = champName
+                                    team100[champKey] = champName
                                 if participant["teamId"] == 200:
-                                    team200[champId] = champName
+                                    team200[champKey] = champName
                     embed = await self.build_active_game(
                         user_data["summoner_name"],
                         game_type,
                         liveChampName,
+                        liveChampId,
                         team100,
                         team200,
                         game_data["gameStartTime"],
@@ -309,6 +312,7 @@ class Blitzcrank(MixinMeta):
                             "messageId": message.id,
                             "guildId": message.guild.id,
                             "champName": liveChampName,
+                            "champId": liveChampId,
                             "team100": team100,
                             "team200": team200,
                         },
@@ -322,10 +326,8 @@ class Blitzcrank(MixinMeta):
     async def end_game(self, member: discord.Member, user_data, channel):
         log.debug("Ending game...")
         message_id = await self.config.member(member).active_game.get_raw("messageId")
-        champ_name = await self.config.member(member).active_game.get_raw("champName")
-        team100 = await self.config.member(member).active_game.get_raw("team100")
-        team200 = await self.config.member(member).active_game.get_raw("team200")
+        champ_id = await self.config.member(member).active_game.get_raw("champId")
         sent_message = await channel.fetch_message(message_id)
-        embed = await self.build_end_game(user_data["summoner_name"], champ_name, team100, team200)
+        embed = await self.build_end_game(user_data["summoner_name"], champ_id)
         await sent_message.edit(embed=embed)
         await self.config.member(member).active_game.clear_raw()

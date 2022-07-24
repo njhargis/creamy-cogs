@@ -50,7 +50,7 @@ class Ezreal(MixinMeta):
         return embed
 
     async def build_active_game(
-        self, summoner_name, game_type, champ_name, team1, team2, timestamp
+        self, summoner_name, game_type, champ_name, champ_id, team1, team2, timestamp
     ):
         log.debug("Building embed")
         version = self.champ_api_version
@@ -58,7 +58,7 @@ class Ezreal(MixinMeta):
         embed.title = f"{summoner_name} has started a {game_type} game!"
         embed.color = 0x00FF00
         embed.set_thumbnail(
-            url=f"http://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{champ_name}.png"
+            url=f"http://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{champ_id}.png"
         )
         teamComp1 = ""
         teamComp2 = ""
@@ -85,13 +85,13 @@ class Ezreal(MixinMeta):
         log.debug("Returning embed")
         return embed
 
-    async def build_end_game(self, summoner_name, champ_name, team1, team2):
+    async def build_end_game(self, summoner_name, champ_id):
         version = self.champ_api_version
         embed = discord.Embed()
         embed.title = f"{summoner_name}'s game has ended."
         embed.color = 0xFF0000
         embed.set_thumbnail(
-            url=f"http://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{champ_name}.png"
+            url=f"http://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{champ_id}.png"
         )
         embed.timestamp = datetime.utcnow()
         return embed
