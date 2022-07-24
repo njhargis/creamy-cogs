@@ -263,9 +263,7 @@ class Blitzcrank(MixinMeta):
                             playerCount += 1
                 # FOR DEV TESTING IN CUSTOMS <10 players, comment out line 3 of this if.
                 if (game_data["gameType"] == "MATCHED_GAME") or (
-                    game_data["gameType"]
-                    == "CUSTOM_GAME"
-                    # and playerCount == 10
+                    game_data["gameType"] == "CUSTOM_GAME" and playerCount == 10
                 ):
                     if game_data["gameType"] == "CUSTOM_GAME":
                         game_type = "custom"
