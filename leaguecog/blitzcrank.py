@@ -194,7 +194,7 @@ class Blitzcrank(MixinMeta):
             poll_matches = await self.config.guild(guild).poll_games()
             if poll_matches:
                 try:
-                    channelId = await self.config.guild(guild).alertChannel()
+                    channelId = await self.config.guild(guild).alert_channel()
                     channel = self.bot.get_channel(channelId)
                     log.debug(f"Found channel {channel}")
                 except BaseException as e:
@@ -208,6 +208,7 @@ class Blitzcrank(MixinMeta):
                     basePath, headers = await self.get_riot_url(user_data["region"])
                     if not basePath == "block":
                         url = f"{basePath}spectator/v4/active-games/by-summoner/{user_data['summoner_id']}"
+                        log.debug(channel)
                         async with self._session.get(url, headers=headers) as req:
                             try:
                                 game_data = await req.json()
@@ -247,75 +248,84 @@ class Blitzcrank(MixinMeta):
             await self.end_game(member, user_data, channel)
 
     async def start_game(self, member: discord.Member, user_data, game_data, channel):
-        log.debug("Starting game..")
-        if game_data["gameMode"] == "CLASSIC":
-            # If it is a custom, only care if 10 non-bots.
-            playerCount = 0
-            if game_data["gameType"] == "CUSTOM_GAME":
-                for participant in game_data["participants"]:
-                    if not participant["bot"]:
-                        playerCount += 1
-            # FOR DEV TESTING IN CUSTOMS <10 players, comment out line 3 of this if.
-            if (game_data["gameType"] == "MATCHED_GAME") or (
-                game_data["gameType"]
-                == "CUSTOM_GAME"
-                # and playerCount == 10
-            ):
+        log.debug("Seeing if duplicate game..")
+        # There is a possible de-sync issue that a game can be found right after we end it due to Riot API.
+        # This prevents us from posting it again.
+        games = await self.config.guild(channel.guild).posted_games()
+        if (str(game_data["gameId"]) + str(user_data["summoner_id"])) not in games:
+            log.debug("Starting game.")
+            if game_data["gameMode"] == "CLASSIC":
+                # If it is a custom, only care if 10 non-bots.
+                playerCount = 0
                 if game_data["gameType"] == "CUSTOM_GAME":
-                    game_type = "custom"
-                elif game_data["gameQueueConfigId"] == 420:
-                    game_type = "ranked solo/duo"
-                elif game_data["gameQueueConfigId"] == 440:
-                    game_type = "ranked flex"
-                elif game_data["gameQueueConfigId"] in (400, 4430):
-                    game_type = "normal"
-                else:
-                    game_type = "unknown type:" + str(game_data["gameQueueConfigId"])
-                champs = self.champlist["data"]
-                team100 = {}
-                team200 = {}
-                for participant in game_data["participants"]:
-                    for i in champs:
-                        loopChamp = champs[i]
-                        if str(loopChamp["key"]) == str(participant["championId"]):
-                            champName = loopChamp["name"]
-                            champId = loopChamp["key"]
-                            if participant["summonerId"] == user_data["summoner_id"]:
-                                liveChampName = champName
-                            if participant["teamId"] == 100:
-                                team100[champId] = champName
-                            if participant["teamId"] == 200:
-                                team200[champId] = champName
-                embed = await self.build_active_game(
-                    user_data["summoner_name"],
-                    game_type,
-                    liveChampName,
-                    team100,
-                    team200,
-                    game_data["gameStartTime"],
-                )
-                message = await channel.send(embed=embed)
-                await self.config.member(member).active_game.set(
-                    value={
-                        "gameId": game_data["gameId"],
-                        "startTime": game_data["gameStartTime"],
-                        "active": True,
-                        "messageId": message.id,
-                        "guildId": message.guild.id,
-                        "champName": liveChampName,
-                        "team100": team100,
-                        "team200": team200,
-                    },
-                )
-                log.debug("Set active game")
+                    for participant in game_data["participants"]:
+                        if not participant["bot"]:
+                            playerCount += 1
+                # FOR DEV TESTING IN CUSTOMS <10 players, comment out line 3 of this if.
+                if (game_data["gameType"] == "MATCHED_GAME") or (
+                    game_data["gameType"] == "CUSTOM_GAME" and playerCount == 10
+                ):
+                    if game_data["gameType"] == "CUSTOM_GAME":
+                        game_type = "custom"
+                    elif game_data["gameQueueConfigId"] == 420:
+                        game_type = "ranked solo/duo"
+                    elif game_data["gameQueueConfigId"] == 440:
+                        game_type = "ranked flex"
+                    elif game_data["gameQueueConfigId"] in (400, 430):
+                        game_type = "normal"
+                    else:
+                        game_type = "unknown type:" + str(game_data["gameQueueConfigId"])
+                    champs = self.champlist["data"]
+                    team100 = {}
+                    team200 = {}
+                    for participant in game_data["participants"]:
+                        for i in champs:
+                            loopChamp = champs[i]
+                            if str(loopChamp["key"]) == str(participant["championId"]):
+                                champId = loopChamp["id"]
+                                champName = loopChamp["name"]
+                                champKey = loopChamp["key"]
+                                if participant["summonerId"] == user_data["summoner_id"]:
+                                    liveChampName = champName
+                                    liveChampId = champId
+                                if participant["teamId"] == 100:
+                                    team100[champKey] = champName
+                                if participant["teamId"] == 200:
+                                    team200[champKey] = champName
+                    embed = await self.build_active_game(
+                        user_data["summoner_name"],
+                        game_type,
+                        liveChampName,
+                        liveChampId,
+                        team100,
+                        team200,
+                        game_data["gameStartTime"],
+                    )
+                    message = await channel.send(embed=embed)
+                    await self.config.member(member).active_game.set(
+                        value={
+                            "gameId": game_data["gameId"],
+                            "startTime": game_data["gameStartTime"],
+                            "active": True,
+                            "messageId": message.id,
+                            "guildId": message.guild.id,
+                            "champName": liveChampName,
+                            "champId": liveChampId,
+                            "team100": team100,
+                            "team200": team200,
+                        },
+                    )
+                    async with self.config.guild(channel.guild).posted_games() as games:
+                        games.append(str(game_data["gameId"]) + str(user_data["summoner_id"]))
+                    log.debug("Set active game")
+        else:
+            log.debug("Skipped duplicate game.")
 
     async def end_game(self, member: discord.Member, user_data, channel):
         log.debug("Ending game...")
         message_id = await self.config.member(member).active_game.get_raw("messageId")
-        champ_name = await self.config.member(member).active_game.get_raw("champName")
-        team100 = await self.config.member(member).active_game.get_raw("team100")
-        team200 = await self.config.member(member).active_game.get_raw("team200")
+        champ_id = await self.config.member(member).active_game.get_raw("champId")
         sent_message = await channel.fetch_message(message_id)
-        embed = await self.build_end_game(user_data["summoner_name"], champ_name, team100, team200)
+        embed = await self.build_end_game(user_data["summoner_name"], champ_id)
         await sent_message.edit(embed=embed)
         await self.config.member(member).active_game.clear_raw()

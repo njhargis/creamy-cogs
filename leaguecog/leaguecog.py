@@ -45,7 +45,8 @@ class LeagueCog(
 
     default_guild_settings = {
         "default_region": "NA",
-        "alertChannel": "",
+        "alert_channel": "",
+        "posted_games": [],
     }
 
     default_role_settings = {"mention": False}
@@ -269,7 +270,7 @@ class LeagueCog(
         alert_channel_id = text_channel_dict[alert_channel_name]
 
         # set the alert channel via channel id
-        await self.config.guild(ctx.guild).alertChannel.set(alert_channel_id)
+        await self.config.guild(ctx.guild).alert_channel.set(alert_channel_id)
 
         # TODO remove reactions, or remove last message if had to get text input
 
@@ -381,7 +382,7 @@ class LeagueCog(
         Example:
             [p]leagueset channel
         """
-        await self.config.alertChannel.set(ctx.channel.id)
+        await self.config.alert_channel.set(ctx.channel.id)
         await ctx.send("Channel set.")
 
     @leagueset.command(name="enable-matches")
