@@ -80,7 +80,9 @@ class Ezreal(MixinMeta):
         else:
             embed.add_field(name="Red Team", value="No teammates.")
 
-        embed.timestamp = datetime.utcfromtimestamp(timestamp / 1000)
+        embed.timestamp = datetime.utcnow()
+
+        log.debug("Returning embed")
         return embed
 
     async def build_end_game(self, summoner_name, champ_name, team1, team2):

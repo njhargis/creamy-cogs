@@ -270,7 +270,7 @@ class LeagueCog(
         alert_channel_id = text_channel_dict[alert_channel_name]
 
         # set the alert channel via channel id
-        await self.config.guild(ctx.guild).alertChannel.set(alert_channel_id)
+        await self.config.guild(ctx.guild).alert_channel.set(alert_channel_id)
 
         # TODO remove reactions, or remove last message if had to get text input
 
