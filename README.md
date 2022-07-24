@@ -43,7 +43,7 @@ Next add my repo using the following command:
 
 Then, you will have to download each cog individually. For example, if you want to download the League of Legends cog, you would enter the following command:
 
-`>cog install creamycogs leaguecog`
+`[p]cog install creamycogs leaguecog`
 
 Make sure that you use the `[p]cog update` command to periodically update the cogs. This will ensure that you are getting the latest bug fixes and features. You may also update a specific cog by typing `[p]cog update leaguecog`.
 

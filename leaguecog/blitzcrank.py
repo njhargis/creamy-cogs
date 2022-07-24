@@ -152,13 +152,7 @@ class Blitzcrank(MixinMeta):
                         await user.summoner_id.set(smnId)
                         await user.region.set(region.lower())
 
-                        currMsg = (
-                            f"Summoner now registered.\n"
-                            f"**Summoner Name**: {name}\n"
-                            f"**PUUID**: {pid}\n"
-                            f"**AccountId**: {acctId}\n"
-                            f"**SummonerId**: {smnId}"
-                        )
+                        currMsg = f"Summoner now registered.\n" f"**Summoner Name**: {name}\n"
 
                     else:
                         currTitle = "Registration Failure"
@@ -255,19 +249,8 @@ class Blitzcrank(MixinMeta):
         if (str(game_data["gameId"]) + str(user_data["summoner_id"])) not in games:
             log.debug("Starting game.")
             if game_data["gameMode"] == "CLASSIC":
-                # If it is a custom, only care if 10 non-bots.
-                playerCount = 0
-                if game_data["gameType"] == "CUSTOM_GAME":
-                    for participant in game_data["participants"]:
-                        if not participant["bot"]:
-                            playerCount += 1
-                # FOR DEV TESTING IN CUSTOMS <10 players, comment out line 3 of this if.
-                if (game_data["gameType"] == "MATCHED_GAME") or (
-                    game_data["gameType"] == "CUSTOM_GAME" and playerCount == 10
-                ):
-                    if game_data["gameType"] == "CUSTOM_GAME":
-                        game_type = "custom"
-                    elif game_data["gameQueueConfigId"] == 420:
+                if game_data["gameType"] == "MATCHED_GAME":
+                    if game_data["gameQueueConfigId"] == 420:
                         game_type = "ranked solo/duo"
                     elif game_data["gameQueueConfigId"] == 440:
                         game_type = "ranked flex"

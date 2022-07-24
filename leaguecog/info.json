@@ -1,9 +1,9 @@
 {
     "author": ["njhargis"],
     "description": "Gets information about summoners, champions, and matches from League of Legends. Also allows you to bet on the outcome of a match.",
-    "install_msg": "Thank you for installing LeagueCog. After loading the cog with `[p]load league`, use [p]league setup to walk through setup. Use [p]help league to view commands.",
+    "install_msg": "Thank you for installing LeagueCog. After loading the cog with `[p]load leaguecog`, use [p]league setup to walk through setup. Use [p]help league to view commands.",
     "short": "Gets information about summoners, champions, and matches from League of Legends.",
-    "tags": ["league", "game", "legend", "economy"],
+    "tags": ["league", "game", "legend", "economy", "league of legends"],
     "type": "COG",
-    "end_user_data_statement": "This cog does not persistently store data or metadata about users."
+    "end_user_data_statement": "This cog stores some metadata about users if they register with the cog."
 }
