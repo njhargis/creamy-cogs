@@ -41,8 +41,6 @@ class LeagueCog(
 
     default_global_settings = {
         "notified_owner_missing_league_key": False,
-        # We should dynamically calculate this based on registered summoners to not hit throttle limit.
-        "refresh_timer": 30,
     }
 
     default_guild_settings = {
