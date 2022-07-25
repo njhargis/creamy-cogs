@@ -27,7 +27,9 @@ class Zilean(MixinMeta):
     #       this will pick up new users that registered during
     #           the last sleep window
     async def calculate_cooldown(self):
-        total_registered_users = 0
+        # start with total_registered_users = 1 else refresh timer
+        #   will default to zero
+        total_registered_users = 1
         guilds = await self.config.all_guilds()
 
         log.info(f"guilds == {guilds}")

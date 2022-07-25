@@ -126,12 +126,10 @@ class LeagueCog(
     async def _game_alerts(self):
         """Loops every X seconds to see if list of registered summoners are in a game."""
         await self.bot.wait_until_ready()
-        zilean = Zilean()
         while True:
-            log.debug("Calculating loop interval...")
-            zilean.calculate_cooldown()
-            log.debug(f"zilean.cooldown == {zilean.cooldown}")
-            self.config.refresh_timer.set(zilean.cooldown)
+            await self.calculate_cooldown()
+            log.debug(f"self.cooldown == {self.cooldown}")
+            await self.config.refresh_timer.set(self.cooldown)
             log.debug("Checking games")
             await self.check_games()
             log.debug("Sleeping...")
