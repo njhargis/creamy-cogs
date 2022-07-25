@@ -2,13 +2,13 @@ from datetime import datetime
 import discord
 import logging
 
-from .mixinmeta import MixinMeta
+from .mixinmeta import MixInMeta
 
 
 log = logging.getLogger("red.creamy-cogs.league")
 
 
-class Ezreal(MixinMeta):
+class Ezreal(MixInMeta):
     """
     'Lot of good mages out there. None of them are this hot!'
 
