@@ -30,6 +30,7 @@ class CompositeMetaClass(type(commands.Cog), type(ABC)):
 class LeagueCog(
     Blitzcrank,
     Ezreal,
+    Zilean,
     commands.Cog,
     metaclass=CompositeMetaClass,
 ):
@@ -125,7 +126,12 @@ class LeagueCog(
     async def _game_alerts(self):
         """Loops every X seconds to see if list of registered summoners are in a game."""
         await self.bot.wait_until_ready()
+        zilean = Zilean()
         while True:
+            log.debug("Calculating loop interval...")
+            zilean.calculate_cooldown()
+            log.debug(f"zilean.cooldown == {zilean.cooldown}")
+            self.config.refresh_timer.set(zilean.cooldown)
             log.debug("Checking games")
             await self.check_games()
             log.debug("Sleeping...")

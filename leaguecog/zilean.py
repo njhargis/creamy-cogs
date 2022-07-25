@@ -46,5 +46,5 @@ class Zilean(MixinMeta):
         overhead_ratio = 0.75
         reqs_per_loop = 3
 
-        cooldown = ((120 / (100 * overhead_ratio)) * total_registered_users) * reqs_per_loop
-        log.info(f"cooldown == {cooldown}")
+        self.cooldown = ((120 / (100 * overhead_ratio)) * total_registered_users) * reqs_per_loop
+        log.info(f"(Zilean) self.cooldown == {self.cooldown}")
