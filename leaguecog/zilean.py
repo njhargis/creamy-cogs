@@ -25,6 +25,7 @@ class Zilean(MixinMeta):
     """
 
     async def calculate_cooldown(self):
+        log.debug("Calculating cooldown...")
         # start with total_registered_users == 1 else refresh timer defaults to 0s
         total_registered_users = 1
         guilds = await self.config.all_guilds()
@@ -34,14 +35,12 @@ class Zilean(MixinMeta):
             poll_matches = await self.config.guild(guild).poll_games()
             if poll_matches:
                 users_in_guild = await self.config.all_members(guild=guild)
-                log.info(f"users_in_guild = {users_in_guild}")
             # get the length of the guild dictionary and add it to your total_registered_users
             total_registered_users += len(users_in_guild)
 
         # subtract the 1 from the beginning to get an accurate count
         #   i.e. if you just have one user, calculate for 1 user instead of 2
         total_registered_users -= 1
-        log.info(f"total_registered_users == {total_registered_users}")
 
         # leave bandwidth for some non-looping functions like set-summoner
         #   and account for multiple requests in each loop
@@ -53,4 +52,6 @@ class Zilean(MixinMeta):
             ((120 / (100 * overhead_ratio)) * total_registered_users) * reqs_per_loop,
             2,  # round to 2 decimal places
         )
-        log.info(f"cooldown == {self.cooldown}")
+        log.debug(
+            f"total registered users = {total_registered_users}, refresh timer cooldown = {self.cooldown}s"
+        )

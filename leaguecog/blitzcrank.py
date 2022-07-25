@@ -208,7 +208,6 @@ class Blitzcrank(MixinMeta):
                     basePath, headers = await self.get_riot_url(user_data["region"])
                     if not basePath == "block":
                         url = f"{basePath}spectator/v4/active-games/by-summoner/{user_data['summoner_id']}"
-                        log.debug(channel)
                         async with self._session.get(url, headers=headers) as req:
                             try:
                                 game_data = await req.json()
