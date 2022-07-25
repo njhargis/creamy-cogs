@@ -25,23 +25,22 @@ class Zilean(MixinMeta):
     """
 
     async def calculate_cooldown(self):
-        # start with total_registered_users = 1 else refresh timer
-        #   will default to zero
+        # start with total_registered_users == 1 else refresh timer defaults to 0s
         total_registered_users = 1
         guilds = await self.config.all_guilds()
 
-        log.info(f"guilds == {guilds}")
-
         for guildId in guilds:
-            log.info(f"guildId == {guildId}")
             guild = await self.bot.fetch_guild(guildId)
             poll_matches = await self.config.guild(guild).poll_games()
-            log.info(f"poll_matches == {poll_matches}")
             if poll_matches:
-                registered_users_in_guild = await self.config.all_members(guild=guild)
-                log.info(f"registered_users_in_guild = {registered_users_in_guild}")
-            total_registered_users += registered_users_in_guild
+                users_in_guild = await self.config.all_members(guild=guild)
+                log.info(f"users_in_guild = {users_in_guild}")
+            # get the length of the guild dictionary and add it to your total_registered_users
+            total_registered_users += len(users_in_guild)
 
+        # subtract the 1 from the beginning to get an accurate count
+        #   i.e. if you just have one user, calculate for 1 user instead of 2
+        total_registered_users -= 1
         log.info(f"total_registered_users == {total_registered_users}")
 
         # leave bandwidth for some non-looping functions like set-summoner
@@ -49,8 +48,9 @@ class Zilean(MixinMeta):
         overhead_ratio = 0.75
         reqs_per_loop = 3
 
+        # calculate the refresh timer, and round it off to 2 decimal places
         self.cooldown = round(
             ((120 / (100 * overhead_ratio)) * total_registered_users) * reqs_per_loop,
-            2,  # decimal places
+            2,  # round to 2 decimal places
         )
-        log.info(f"zilean cooldown == {self.cooldown}")
+        log.info(f"cooldown == {self.cooldown}")
