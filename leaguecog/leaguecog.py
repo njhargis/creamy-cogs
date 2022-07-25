@@ -12,6 +12,7 @@ from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
 
 from .blitzcrank import Blitzcrank
 from .ezreal import Ezreal
+from .zilean import Zilean
 
 
 log = logging.getLogger("red.creamy-cogs.league")
