@@ -12,6 +12,7 @@ from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
 
 from .blitzcrank import Blitzcrank
 from .ezreal import Ezreal
+from .zilean import Zilean
 
 
 log = logging.getLogger("red.creamy-cogs.league")
@@ -29,6 +30,7 @@ class CompositeMetaClass(type(commands.Cog), type(ABC)):
 class LeagueCog(
     Blitzcrank,
     Ezreal,
+    Zilean,
     commands.Cog,
     metaclass=CompositeMetaClass,
 ):
@@ -39,8 +41,6 @@ class LeagueCog(
 
     default_global_settings = {
         "notified_owner_missing_league_key": False,
-        # We should dynamically calculate this based on registered summoners to not hit throttle limit.
-        "refresh_timer": 30,
     }
 
     default_guild_settings = {
@@ -97,12 +97,17 @@ class LeagueCog(
     async def initialize(self) -> None:
         """Should be called straight after cog instantiation."""
         await self.bot.wait_until_ready()
+
         try:
             log.debug("Updating Riot API Version...")
             # We need to run this more often, but not sure when.
             await self.update_version()
+
             log.debug("Attempting to start loop..")
+            # determine time between looping through users
+            await self.calculate_cooldown()
             self.task = self.bot.loop.create_task(self._game_alerts())
+
         except Exception as error:
             log.exception("Failed to initialize League cog:", exc_info=error)
 
@@ -125,6 +130,7 @@ class LeagueCog(
         """Loops every X seconds to see if list of registered summoners are in a game."""
         await self.bot.wait_until_ready()
         while True:
+            # this is the main check games loop
             log.debug("Checking games")
             await self.check_games()
             log.debug("Sleeping...")
@@ -335,6 +341,8 @@ class LeagueCog(
 
         # See if summoner name exists on that region.
         await self.get_summoner_info(ctx, name, member, region, True)
+        # re-calculate time between check games loops
+        await self.calculate_cooldown()
 
     @commands.group()
     async def leagueset(self, ctx: commands.Context):
