@@ -53,10 +53,11 @@ class Zilean(MixinMeta):
         # -------------------------------------------------- = seconds between each loop
         #      (  100 requests * overhead ratio )
 
-        self.cooldown = round(
+        cooldown = round(
             ((120 * total_registered_users * reqs_per_loop) / (100 * overhead_ratio)),
             2,  # round to 2 decimal places
         )
+        await self.config.refresh_timer.set(cooldown)
         log.debug(
-            f"total registered users = {total_registered_users}, refresh timer cooldown = {self.cooldown}s"
+            f"total registered users = {total_registered_users}, refresh timer cooldown = {cooldown}s"
         )
