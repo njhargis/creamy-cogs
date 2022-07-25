@@ -48,8 +48,13 @@ class Zilean(MixinMeta):
         reqs_per_loop = 3
 
         # calculate the refresh timer, and round it off to 2 decimal places
+
+        #  ( 120 seconds * # of users * requests per loop )
+        # -------------------------------------------------- = seconds between each loop
+        #      (  100 requests * overhead ratio )
+
         self.cooldown = round(
-            ((120 / (100 * overhead_ratio)) * total_registered_users) * reqs_per_loop,
+            ((120 * total_registered_users * reqs_per_loop) / (100 * overhead_ratio)),
             2,  # round to 2 decimal places
         )
         log.debug(
