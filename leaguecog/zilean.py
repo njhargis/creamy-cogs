@@ -26,7 +26,7 @@ class Zilean(MixinMeta):
     #   and then every time it loops through all the users
     #       this will pick up new users that registered during
     #           the last sleep window
-    async def calculate_refresh_interval(self, config):
+    async def calculate_cooldown(self):
         total_registered_users = 0
         guilds = await self.config.all_guilds()
 
@@ -46,7 +46,5 @@ class Zilean(MixinMeta):
         overhead_ratio = 0.75
         reqs_per_loop = 3
 
-        self.refresh_time = (
-            (120 / (100 * overhead_ratio)) * total_registered_users
-        ) * reqs_per_loop
-        log.info(f"self.refresh_time == {self.refresh_time}")
+        cooldown = ((120 / (100 * overhead_ratio)) * total_registered_users) * reqs_per_loop
+        log.info(f"cooldown == {cooldown}")
