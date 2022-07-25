@@ -127,8 +127,9 @@ class LeagueCog(
         """Loops every X seconds to see if list of registered summoners are in a game."""
         await self.bot.wait_until_ready()
         while True:
+            # this is the main check games loop, so we can re-calculate our
+            #   refresh interval each loop through here and pick up new registrations
             await self.calculate_cooldown()
-            log.debug(f"self.cooldown == {self.cooldown}")
             await self.config.refresh_timer.set(self.cooldown)
             log.debug("Checking games")
             await self.check_games()

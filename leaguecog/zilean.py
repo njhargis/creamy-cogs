@@ -16,16 +16,14 @@ class Zilean(MixinMeta):
             *  20 requests every 1 seconds(s)
             *  100 requests every 2 minutes(s)
 
-    Note that the API token is used for the whole bot,
-        so if the bot is in multiple guilds, you have to take into account
-            total registered users across all guilds.
+    Since the API token is used for the singular bot instance, it will
+        take into acount total registered users across all guilds.
 
+    NOTE overhead_ratio and reqs_per_loop can be changed to provide
+        more or less overhead and adjust requests per check_games loop
+            per summoner as needed.
     """
 
-    # The goal here to calculate the interval at leaguecog init
-    #   and then every time it loops through all the users
-    #       this will pick up new users that registered during
-    #           the last sleep window
     async def calculate_cooldown(self):
         # start with total_registered_users = 1 else refresh timer
         #   will default to zero
@@ -35,10 +33,13 @@ class Zilean(MixinMeta):
         log.info(f"guilds == {guilds}")
 
         for guildId in guilds:
+            log.info(f"guildId == {guildId}")
             guild = await self.bot.fetch_guild(guildId)
             poll_matches = await self.config.guild(guild).poll_games()
+            log.info(f"poll_matches == {poll_matches}")
             if poll_matches:
                 registered_users_in_guild = await self.config.all_members(guild=guild)
+                log.info(f"registered_users_in_guild = {registered_users_in_guild}")
             total_registered_users += registered_users_in_guild
 
         log.info(f"total_registered_users == {total_registered_users}")
@@ -48,5 +49,8 @@ class Zilean(MixinMeta):
         overhead_ratio = 0.75
         reqs_per_loop = 3
 
-        self.cooldown = ((120 / (100 * overhead_ratio)) * total_registered_users) * reqs_per_loop
-        log.info(f"(Zilean) self.cooldown == {self.cooldown}")
+        self.cooldown = round(
+            ((120 / (100 * overhead_ratio)) * total_registered_users) * reqs_per_loop,
+            2,  # decimal places
+        )
+        log.info(f"zilean cooldown == {self.cooldown}")
