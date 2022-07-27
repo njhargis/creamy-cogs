@@ -58,6 +58,7 @@ class LeagueCog(
         "account_id": "",
         "region": "",
         "active_game": {},
+        "poll_member_games": True,
     }
 
     def __init__(self, bot: Red):
@@ -203,7 +204,7 @@ class LeagueCog(
         await ctx.bot.wait_for("reaction_add", check=polling_pred)
 
         if polling_pred.result is True:
-            await self.config.guild(ctx.guild).poll_games.set(True)
+            await self.config.guild(ctx.guild).poll_guild_games.set(True)
 
         # TODO remove reactions
 
@@ -404,7 +405,7 @@ class LeagueCog(
             [p]leagueset enable-matches
         """
         # Need some logic to make sure a channel is set before allowing this command to run.
-        await self.config.guild(ctx.guild).poll_games.set(True)
+        await self.config.guild(ctx.guild).poll_guild_games.set(True)
         await ctx.send("Match tracking enabled.")
 
     @leagueset.command(name="reset")
