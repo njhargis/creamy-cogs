@@ -25,9 +25,14 @@ class Zilean(MixinMeta):
     """
 
     async def calculate_cooldown(self):
+        """
+        Counts up all of the users registered with [p]league set-summoner,
+            and calculates how often to hit the API while avoiding hitting the cap.
+        If no one has registered, counts registered users as 1.
+            This way, effectively the default refresh_timer is 4.8 seconds.
+        """
         log.debug("Calculating cooldown...")
-        # start with total_registered_users == 1 else refresh timer defaults to 0s
-        total_registered_users = 1
+        total_registered_users = 0
         guilds = await self.config.all_guilds()
 
         for guildId in guilds:
@@ -38,11 +43,10 @@ class Zilean(MixinMeta):
             # get the length of the guild dictionary and add it to your total_registered_users
             total_registered_users += len(users_in_guild)
 
-        # subtract the 1 from the beginning to get an accurate count
-        #   i.e. if you just have one user, calculate for 1 user instead of 2
-        #       and make sure that total_registered_users isn't <1
-        if total_registered_users > 1:
-            total_registered_users -= 1
+        # if no one has registered, set total_registered_users to 1
+        #   this way, refresh_timer doesn't get set to 0 seconds
+        if total_registered_users < 1:
+            total_registered_users = 1
 
         # leave bandwidth for some non-looping functions like set-summoner
         #   and account for multiple requests in each loop
