@@ -40,8 +40,8 @@ class Zilean(MixinMeta):
             poll_matches = await self.config.guild(guild).poll_games()
             if poll_matches:
                 users_in_guild = await self.config.all_members(guild=guild)
-            # get the length of the guild dictionary and add it to your total_registered_users
-            total_registered_users += len(users_in_guild)
+                # get the length of the guild dictionary and add it to your total_registered_users
+                total_registered_users += len(users_in_guild)
 
         # if no one has registered, set total_registered_users to 1
         #   this way, refresh_timer doesn't get set to 0 seconds
