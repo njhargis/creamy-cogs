@@ -45,7 +45,7 @@ class Zilean(MixinMeta):
 
         # if no one has registered, set total_registered_users to 1
         #   this way, refresh_timer doesn't get set to 0 seconds
-        if total_registered_users < 1:
+        if not total_registered_users:
             total_registered_users = 1
 
         # leave bandwidth for some non-looping functions like set-summoner
