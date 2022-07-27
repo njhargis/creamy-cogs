@@ -40,7 +40,9 @@ class Zilean(MixinMeta):
 
         # subtract the 1 from the beginning to get an accurate count
         #   i.e. if you just have one user, calculate for 1 user instead of 2
-        total_registered_users -= 1
+        #       and make sure that total_registered_users isn't <1
+        if total_registered_users > 1:
+            total_registered_users -= 1
 
         # leave bandwidth for some non-looping functions like set-summoner
         #   and account for multiple requests in each loop
