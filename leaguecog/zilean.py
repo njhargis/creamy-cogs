@@ -42,11 +42,12 @@ class Zilean(MixinMeta):
             poll_guild_games = await self.config.guild(guild).poll_guild_games()
             if poll_guild_games:
                 guild_members = await self.config.all_members(guild=guild)
-                for member in guild_members:
+                for memberId in guild_members:
+                    member = await self.bot.get_or_fetch_member(guild, memberId)
+                    poll_member_games = await self.config.member(member).poll_member_games()
 
-                    # TODO see if there is a way to await this from config
+                    log.info(f"poll_member_games == {poll_member_games}")
 
-                    poll_member_games = guild_members[member]["poll_member_games"]
                     if poll_member_games:
                         total_registered_users += 1
         # if no one has registered, set total_registered_users to 1
