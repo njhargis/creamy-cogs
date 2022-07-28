@@ -43,6 +43,9 @@ class Zilean(MixinMeta):
             if poll_guild_games:
                 guild_members = await self.config.all_members(guild=guild)
                 for member in guild_members:
+
+                    # TODO see if there is a way to await this from config
+
                     poll_member_games = guild_members[member]["poll_member_games"]
                     if poll_member_games:
                         total_registered_users += 1

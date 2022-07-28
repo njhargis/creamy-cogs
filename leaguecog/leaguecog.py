@@ -345,6 +345,11 @@ class LeagueCog(
         # re-calculate time between check games loops
         await self.calculate_cooldown()
 
+    @league.command(name="toggle-polling")
+    async def toggle_polling(self, ctx: commands.Context, name: str = "", bool: str = None):
+        """This allows the user to toggle polling on/off for their account"""
+        pass
+
     @commands.group()
     async def leagueset(self, ctx: commands.Context):
         """Base command to manage League settings"""
