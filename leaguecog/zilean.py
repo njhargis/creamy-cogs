@@ -34,23 +34,21 @@ class Zilean(MixinMeta):
         log.debug("Calculating cooldown...")
         total_registered_users = 0
         guilds = await self.config.all_guilds()
-
+        # check to see if polling is enabled for the guild
+        #   if True, check for members who have polling enabled
+        #       and only count those who have enabled polling
         for guildId in guilds:
-            # check to see if polling is enabled for the guild
-            #   if True, check for members who have polling enabled
-            #       and only count those who have enabled polling
             guild = await self.bot.fetch_guild(guildId)
             poll_guild_games = await self.config.guild(guild).poll_guild_games()
             if poll_guild_games:
                 guild_members = await self.config.all_members(guild=guild)
                 for member in guild_members:
-                    poll_member_games = await self.config.member(member).poll_member_games()
+                    poll_member_games = guild_members[member]["poll_member_games"]
                     if poll_member_games:
                         total_registered_users += 1
-
         # if no one has registered, set total_registered_users to 1
         #   this way, refresh_timer doesn't get set to 0 seconds
-        if total_registered_users < 1:
+        if not total_registered_users:
             total_registered_users = 1
 
         # leave bandwidth for some non-looping functions like set-summoner
