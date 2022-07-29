@@ -356,14 +356,14 @@ class LeagueCog(
         member = ctx.author
 
         if state:
+            # set state_bool to whatever the user entered as 'state'
             state = state.lower().strip()
             if state in ("on", "true"):
                 state_bool = True
             elif state in ("off", "false"):
                 state_bool = False
-
         else:
-            # get the current state, and toggle to the opposite
+            # check the current state, and toggle to the opposite
             current_state = await self.config.member(member).poll_member_games()
             if current_state:
                 state_bool = False
