@@ -346,9 +346,39 @@ class LeagueCog(
         await self.calculate_cooldown()
 
     @league.command(name="toggle-polling")
-    async def toggle_polling(self, ctx: commands.Context, name: str = "", bool: str = None):
-        """This allows the user to toggle polling on/off for their account"""
-        pass
+    async def toggle_polling(self, ctx: commands.Context, state: str = None):
+        """
+        This allows the user to toggle polling on/off for their account.
+        If 'state' arg isn't passed, will check the current state and set the opposite.
+
+        TODO move functionality to PM with the bot
+        """
+        member = ctx.author
+
+        if state:
+            state = state.lower().strip()
+            if state in ("on", "true"):
+                state_bool = True
+            elif state in ("off", "false"):
+                state_bool = False
+
+        else:
+            # get the current state, and toggle to the opposite
+            current_state = await self.config.member(member).poll_member_games()
+            if current_state:
+                state_bool = False
+            else:
+                state_bool = True
+
+        # rather than send true/false to the user, send ON or OFF in the message
+        if state_bool:
+            msg_bool = "ON"
+        else:
+            msg_bool = "OFF"
+
+        # set the new bool state and message the user
+        await self.config.member(member).poll_member_games.set(state_bool)
+        await ctx.send(f"Polling {msg_bool} for {ctx.author.mention}")
 
     @commands.group()
     async def leagueset(self, ctx: commands.Context):

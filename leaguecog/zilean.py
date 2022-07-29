@@ -35,8 +35,7 @@ class Zilean(MixinMeta):
         total_registered_users = 0
         guilds = await self.config.all_guilds()
         # check to see if polling is enabled for the guild
-        #   if True, check for members who have polling enabled
-        #       and only count those who have enabled polling
+        #   if True, only count members who currently have polling enabled
         for guildId in guilds:
             guild = await self.bot.fetch_guild(guildId)
             poll_guild_games = await self.config.guild(guild).poll_guild_games()
@@ -45,9 +44,6 @@ class Zilean(MixinMeta):
                 for memberId in guild_members:
                     member = await self.bot.get_or_fetch_member(guild, memberId)
                     poll_member_games = await self.config.member(member).poll_member_games()
-
-                    log.info(f"poll_member_games == {poll_member_games}")
-
                     if poll_member_games:
                         total_registered_users += 1
         # if no one has registered, set total_registered_users to 1
