@@ -32,7 +32,7 @@ class Zilean(MixInMeta):
             This way, effectively the default refresh_timer is 4.8 seconds.
         """
         log.debug("Calculating cooldown...")
-        total_registered_users = 0
+        total_polling_users = 0
         guilds = await self.config.all_guilds()
         # check to see if polling is enabled for the guild
         #   if True, only count members who currently have polling enabled
@@ -41,15 +41,15 @@ class Zilean(MixInMeta):
             poll_guild_games = await self.config.guild(guild).poll_guild_games()
             if poll_guild_games:
                 guild_members = await self.config.all_members(guild=guild)
-                for memberId in guild_members:
-                    member = await self.bot.get_or_fetch_member(guild, memberId)
-                    poll_member_games = await self.config.member(member).poll_member_games()
-                    if poll_member_games:
-                        total_registered_users += 1
-        # if no one has registered, set total_registered_users to 1
+                for userId in guild_members:
+                    user = await self.bot.get_or_fetch_user(userId)
+                    poll_user_games = await self.config.user(user).poll_user_games()
+                    if poll_user_games:
+                        total_polling_users += 1
+        # if no one has registered, set total_polling_users to 1
         #   this way, refresh_timer doesn't get set to 0 seconds
-        if not total_registered_users:
-            total_registered_users = 1
+        if not total_polling_users:
+            total_polling_users = 1
 
         # leave bandwidth for some non-looping functions like set-summoner
         #   and account for multiple requests in each loop
@@ -63,10 +63,10 @@ class Zilean(MixInMeta):
         #      (  100 requests * overhead ratio )
 
         cooldown = round(
-            ((120 * total_registered_users * reqs_per_loop) / (100 * overhead_ratio)),
+            ((120 * total_polling_users * reqs_per_loop) / (100 * overhead_ratio)),
             2,  # round to 2 decimal places
         )
         await self.config.refresh_timer.set(cooldown)
         log.debug(
-            f"total registered users = {total_registered_users}, refresh timer cooldown = {cooldown}s"
+            f"total registered users = {total_polling_users}, refresh timer cooldown = {cooldown}s"
         )
