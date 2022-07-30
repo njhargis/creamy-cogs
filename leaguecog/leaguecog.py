@@ -365,26 +365,21 @@ class LeagueCog(
         else:
             # get the current state of poll_user_games, and set the opposite
             current_state = await self.config.user(userId).poll_user_games()
-
-            log.info(f"current_state == {current_state}")
-
             if current_state:
                 state_bool = False
             else:
                 state_bool = True
-
-        log.info(f"state_bool == {state_bool}")
 
         if state_bool:
             msg_bool = "ON"
         else:
             msg_bool = "OFF"
 
-        log.info(f"msg_bool == {msg_bool}")
-
         # set the new bool state and message the user
         await self.config.user(userId).poll_user_games.set(state_bool)
         await ctx.send(f"`LeagueCog` set polling `{msg_bool}` for {ctx.author.mention}")
+        # recalculate Zilean timer cooldown
+        await self.calculate_cooldown()
 
     @commands.group()
     async def leagueset(self, ctx: commands.Context):
