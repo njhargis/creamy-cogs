@@ -7,13 +7,13 @@ from lib2to3.pytree import Base
 from redbot.core import Config
 from xml.dom import NotFoundErr
 
-from .mixinmeta import MixinMeta
+from .mixinmeta import MixInMeta
 
 
 log = logging.getLogger("red.creamy-cogs.league")
 
 
-class Blitzcrank(MixinMeta):
+class Blitzcrank(MixInMeta):
     """
     'The time of man has come to an end.'
 

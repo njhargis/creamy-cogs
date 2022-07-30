@@ -1,13 +1,13 @@
 import asyncio
 import logging
 
-from .mixinmeta import MixinMeta
+from .mixinmeta import MixInMeta
 
 
 log = logging.getLogger("red.creamy-cogs.league")
 
 
-class Zilean(MixinMeta):
+class Zilean(MixInMeta):
     """
     'All in good time.'
 
@@ -25,22 +25,31 @@ class Zilean(MixinMeta):
     """
 
     async def calculate_cooldown(self):
+        """
+        Counts up all of the users registered with [p]league set-summoner,
+            and calculates how often to hit the API while avoiding hitting the cap.
+        If no one has registered, counts registered users as 1.
+            This way, effectively the default refresh_timer is 4.8 seconds.
+        """
         log.debug("Calculating cooldown...")
-        # start with total_registered_users == 1 else refresh timer defaults to 0s
-        total_registered_users = 1
+        total_polling_users = 0
         guilds = await self.config.all_guilds()
-
+        # check to see if polling is enabled for the guild
+        #   if True, only count members who currently have polling enabled
         for guildId in guilds:
             guild = await self.bot.fetch_guild(guildId)
-            poll_matches = await self.config.guild(guild).poll_games()
-            if poll_matches:
-                users_in_guild = await self.config.all_members(guild=guild)
-            # get the length of the guild dictionary and add it to your total_registered_users
-            total_registered_users += len(users_in_guild)
-
-        # subtract the 1 from the beginning to get an accurate count
-        #   i.e. if you just have one user, calculate for 1 user instead of 2
-        total_registered_users -= 1
+            poll_guild_games = await self.config.guild(guild).poll_guild_games()
+            if poll_guild_games:
+                guild_members = await self.config.all_members(guild=guild)
+                for userId in guild_members:
+                    user = await self.bot.get_or_fetch_user(userId)
+                    poll_user_games = await self.config.user(user).poll_user_games()
+                    if poll_user_games:
+                        total_polling_users += 1
+        # if no one has registered, set total_polling_users to 1
+        #   this way, refresh_timer doesn't get set to 0 seconds
+        if not total_polling_users:
+            total_polling_users = 1
 
         # leave bandwidth for some non-looping functions like set-summoner
         #   and account for multiple requests in each loop
@@ -54,10 +63,10 @@ class Zilean(MixinMeta):
         #      (  100 requests * overhead ratio )
 
         cooldown = round(
-            ((120 * total_registered_users * reqs_per_loop) / (100 * overhead_ratio)),
+            ((120 * total_polling_users * reqs_per_loop) / (100 * overhead_ratio)),
             2,  # round to 2 decimal places
         )
         await self.config.refresh_timer.set(cooldown)
         log.debug(
-            f"total registered users = {total_registered_users}, refresh timer cooldown = {cooldown}s"
+            f"total registered users = {total_polling_users}, refresh timer cooldown = {cooldown}s"
         )
