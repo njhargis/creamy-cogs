@@ -58,8 +58,9 @@ class LeagueCog(
         "account_id": "",
         "region": "",
         "active_game": {},
-        "poll_member_games": True,
     }
+
+    default_user_settings = {"poll_user_games": True}
 
     def __init__(self, bot: Red):
         self.bot: Red = bot
@@ -68,6 +69,7 @@ class LeagueCog(
         self.config.register_guild(**self.default_guild_settings)
         self.config.register_role(**self.default_role_settings)
         self.config.register_member(**self.default_member_settings)
+        self.config.register_user(**self.default_user_settings)
 
         self.champ_api_version = None
 
@@ -350,10 +352,8 @@ class LeagueCog(
         """
         This allows the user to toggle polling on/off for their account.
         If 'state' arg isn't passed, will check the current state and set the opposite.
-
-        TODO move functionality to PM with the bot
         """
-        member = ctx.author
+        userId = await self.bot.get_or_fetch_user(ctx.author.id)
 
         if state:
             # set state_bool to whatever the user entered as 'state'
@@ -363,22 +363,28 @@ class LeagueCog(
             elif state in ("off", "false"):
                 state_bool = False
         else:
-            # check the current state, and toggle to the opposite
-            current_state = await self.config.member(member).poll_member_games()
+            # get the current state of poll_user_games, and set the opposite
+            current_state = await self.config.user(userId).poll_user_games()
+
+            log.info(f"current_state == {current_state}")
+
             if current_state:
                 state_bool = False
             else:
                 state_bool = True
 
-        # rather than send true/false to the user, send ON or OFF in the message
+        log.info(f"state_bool == {state_bool}")
+
         if state_bool:
             msg_bool = "ON"
         else:
             msg_bool = "OFF"
 
+        log.info(f"msg_bool == {msg_bool}")
+
         # set the new bool state and message the user
-        await self.config.member(member).poll_member_games.set(state_bool)
-        await ctx.send(f"Polling {msg_bool} for {ctx.author.mention}")
+        await self.config.user(userId).poll_user_games.set(state_bool)
+        await ctx.send(f"`LeagueCog` set polling `{msg_bool}` for {ctx.author.mention}")
 
     @commands.group()
     async def leagueset(self, ctx: commands.Context):
