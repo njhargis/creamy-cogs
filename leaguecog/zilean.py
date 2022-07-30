@@ -1,13 +1,13 @@
 import asyncio
 import logging
 
-from .mixinmeta import MixinMeta
+from .mixinmeta import MixInMeta
 
 
 log = logging.getLogger("red.creamy-cogs.league")
 
 
-class Zilean(MixinMeta):
+class Zilean(MixInMeta):
     """
     'All in good time.'
 
