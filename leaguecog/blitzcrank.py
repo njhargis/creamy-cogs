@@ -312,3 +312,31 @@ class Blitzcrank(MixinMeta):
         embed = await self.build_end_game(user_data["summoner_name"], champ_id)
         await sent_message.edit(embed=embed)
         await self.config.member(member).active_game.clear_raw()
+
+    async def match_history(self, member: discord.Member, user_data):
+        basePath, headers = await self.get_riot_url(user_data["region"])
+        if not basePath == "block":
+            url = f"{basePath}match/v5/matches/by-puuid/{user_data['puuid']}/ids"
+            async with self._session.get(url, headers=headers) as req:
+                try:
+                    match_history = await req.json()
+                except aiohttp.ContentTypeError:
+                    match_history = {}
+                if req.status == 200:
+                    log.debug(match_history)
+                    user = self.config.member(member)
+                    try:
+                        last_recorded_match = await user.last_match()
+                        if not last_recorded_match == match_history[0]:
+                            log.debug("New results!")
+                    except BaseException as e:
+                        log.debug(e)
+                        await user.last_match.set(match_history[0])
+                elif req.status == 401 or req.status == 403:
+                    await self.token_expired_or_missing()
+                else:
+                    log.warning = ("Riot API request failed with status code {statusCode}").format(
+                        statusCode=req.status
+                    )
+        else:
+            await self.token_expired_or_missing()
