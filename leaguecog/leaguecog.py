@@ -60,6 +60,8 @@ class LeagueCog(
         "active_game": {},
     }
 
+    default_user_settings = {"poll_user_games": True}
+
     def __init__(self, bot: Red):
         self.bot: Red = bot
         self.config = Config.get_conf(self, 8945225427)
@@ -67,6 +69,7 @@ class LeagueCog(
         self.config.register_guild(**self.default_guild_settings)
         self.config.register_role(**self.default_role_settings)
         self.config.register_member(**self.default_member_settings)
+        self.config.register_user(**self.default_user_settings)
 
         self.champ_api_version = None
 
@@ -203,7 +206,7 @@ class LeagueCog(
         await ctx.bot.wait_for("reaction_add", check=polling_pred)
 
         if polling_pred.result is True:
-            await self.config.guild(ctx.guild).poll_games.set(True)
+            await self.config.guild(ctx.guild).poll_guild_games.set(True)
 
         # TODO remove reactions
 
@@ -344,6 +347,40 @@ class LeagueCog(
         # re-calculate time between check games loops
         await self.calculate_cooldown()
 
+    @league.command(name="toggle-polling")
+    async def toggle_polling(self, ctx: commands.Context, state: str = None):
+        """
+        This allows the user to toggle polling on/off for their account.
+        If 'state' arg isn't passed, will check the current state and set the opposite.
+        """
+        userId = await self.bot.get_or_fetch_user(ctx.author.id)
+
+        if state:
+            # set state_bool to whatever the user entered as 'state'
+            state = state.lower().strip()
+            if state in ("on", "true"):
+                state_bool = True
+            elif state in ("off", "false"):
+                state_bool = False
+        else:
+            # get the current state of poll_user_games, and set the opposite
+            current_state = await self.config.user(userId).poll_user_games()
+            if current_state:
+                state_bool = False
+            else:
+                state_bool = True
+
+        if state_bool:
+            msg_bool = "ON"
+        else:
+            msg_bool = "OFF"
+
+        # set the new bool state and message the user
+        await self.config.user(userId).poll_user_games.set(state_bool)
+        await ctx.send(f"`LeagueCog` set polling `{msg_bool}` for {ctx.author.mention}")
+        # recalculate Zilean timer cooldown
+        await self.calculate_cooldown()
+
     @commands.group()
     async def leagueset(self, ctx: commands.Context):
         """Base command to manage League settings"""
@@ -404,7 +441,7 @@ class LeagueCog(
             [p]leagueset enable-matches
         """
         # Need some logic to make sure a channel is set before allowing this command to run.
-        await self.config.guild(ctx.guild).poll_games.set(True)
+        await self.config.guild(ctx.guild).poll_guild_games.set(True)
         await ctx.send("Match tracking enabled.")
 
     @leagueset.command(name="reset")
