@@ -372,7 +372,6 @@ class LeagueCog(
                         "Valid states: `on`, `true`, `off`, `false` (case-insensitive)\n\n"
                         "Omit the state to toggle the opposite of the current state\n\n"
                         "Example usage:\n"
-                        # TODO get the actual ping for the example message
                         f"`{ctx.clean_prefix}league toggle-polling on`\n"
                         f"`{ctx.clean_prefix}league toggle-polling False`\n"
                         f"`{ctx.clean_prefix}league toggle-polling`"
