@@ -368,14 +368,14 @@ class LeagueCog(
                     self,
                     title="TOGGLE-POLLING: INVALID STATE",
                     msg=(
-                        f"`{state}` is not a valid `state` for `toggle-polling`.\n"
-                        "Valid states: `on`, `true`, `off`, `false` (case-insensitive).\n"
-                        "Omit the argument to toggle the opposite of the current status.\n"
+                        f"`{state}` is not a valid state for `toggle-polling`\n\n"
+                        "Valid states: `on`, `true`, `off`, `false` (case-insensitive)\n\n"
+                        "Omit the state to toggle the opposite of the current state\n\n"
                         "Example usage:\n"
                         # TODO get the actual ping for the example message
-                        "`[p]league toggle-polling on`\n"
-                        "`[p]league toggle-polling False"
-                        "`[p]league toggle-polling`"
+                        f"`{ctx.clean_prefix}league toggle-polling on`\n"
+                        f"`{ctx.clean_prefix}league toggle-polling False`\n"
+                        f"`{ctx.clean_prefix}league toggle-polling`"
                     ),
                 )
                 await ctx.send(embed=invalid_toggle_embed)
