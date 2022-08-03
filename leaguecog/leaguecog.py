@@ -293,6 +293,20 @@ class LeagueCog(
 
         return
 
+    @league.command(name="clear-data")
+    async def clear_data(self, ctx: commands.Context):
+        """Removes all data from all guilds for the user"""
+        guilds = await self.config.all_guilds()
+        for guildId in guilds:
+            guild = await self.bot.fetch_guild(guildId)
+            guild_members = await self.config.all_members(guild=guild)
+
+            log.info(f"CLEAR-DATA guild_members = {guild_members}")
+            log.info(f"ctx.author.id = {ctx.author.id}")
+
+            # TODO use config.clear_raw()
+            # docs here: https://docs.discord.red/en/stable/framework_config.html?highlight=group.clear()#redbot.core.config.Group.clear_raw
+
     @league.command(name="summoner")
     @commands.guild_only()
     async def get_summoner(self, ctx: commands.Context, member: discord.Member = None):
