@@ -362,6 +362,23 @@ class LeagueCog(
                 state_bool = True
             elif state in ("off", "false"):
                 state_bool = False
+            else:
+                # handle user input that isn't valid
+                invalid_toggle_embed = await Ezreal.build_embed(
+                    self,
+                    title="TOGGLE-POLLING: INVALID STATE",
+                    msg=(
+                        f"`{state}` is not a valid state for `toggle-polling`\n\n"
+                        "Valid states: `on`, `true`, `off`, `false` (case-insensitive)\n\n"
+                        "Omit the state to toggle the opposite of the current state\n\n"
+                        "Example usage:\n"
+                        f"`{ctx.clean_prefix}league toggle-polling on`\n"
+                        f"`{ctx.clean_prefix}league toggle-polling False`\n"
+                        f"`{ctx.clean_prefix}league toggle-polling`"
+                    ),
+                )
+                await ctx.send(embed=invalid_toggle_embed)
+                return
         else:
             # get the current state of poll_user_games, and set the opposite
             current_state = await self.config.user(userId).poll_user_games()
