@@ -335,6 +335,24 @@ class LeagueCog(
         member = ctx.author
         name = name.strip()
 
+        # get a list of all of the registered summoner_names
+        # and check to see if the name is already registered for the guild
+        guild_members = await self.config.all_members(guild=ctx.guild)
+        summoner_names = [guild_members[memberId]["summoner_name"] for memberId in guild_members]
+
+        log.info(f"summoner_names == {summoner_names}")
+
+        if name in summoner_names:
+            duplicate_summoner_embed = await Ezreal.build_embed(
+                self,
+                title="DUPLICATE SUMMONER REGISTRATION",
+                msg=(
+                    f"`{name}` is already registered in `{ctx.guild}`.\n"
+                    "If you think this is in error, please contact the bot owner."
+                ),
+            )
+            await ctx.send(embed=duplicate_summoner_embed)
+            return
         # If they did not pass a region, don't change their region if they have one set.
         # If they don't have one set, use the guild's default.
         if not region:
