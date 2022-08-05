@@ -290,8 +290,23 @@ class LeagueCog(
             msg=f"Announcement channel set to #{alert_channel_name}",
         )
         await channel_msg.edit(content=ctx.author.mention, embed=channel_embed)
-
         return
+
+    @league.command(name="clear-data")
+    async def clear_data(self, ctx: commands.Context):
+        """Removes all data from all guilds for the user"""
+        guilds = await self.config.all_guilds()
+
+        for guild_id in guilds:
+            guild = await self.bot.fetch_guild(guild_id)
+            guild_members = await self.config.all_members(guild=guild)
+
+            if ctx.author.id in guild_members.keys():
+                await self.config.member_from_ids(guild_id, ctx.author.id).clear()
+
+        await ctx.send(f"Data cleared for `{ctx.author}`")
+        # re-calculate time between check games loops, now that we've de-registered a user
+        await self.calculate_cooldown()
 
     @league.command(name="summoner")
     @commands.guild_only()
@@ -394,7 +409,7 @@ class LeagueCog(
                         f"`{ctx.clean_prefix}league toggle-polling`"
                     ),
                 )
-                await ctx.send(content=ctx.authorm.mention, embed=invalid_toggle_embed)
+                await ctx.send(content=ctx.author.mention, embed=invalid_toggle_embed)
                 return
         else:
             # get the current state of poll_user_games, and set the opposite
