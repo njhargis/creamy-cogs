@@ -305,6 +305,8 @@ class LeagueCog(
                 await self.config.member_from_ids(guild_id, ctx.author.id).clear()
 
         await ctx.send(f"Data cleared for `{ctx.author}`")
+        # re-calculate time between check games loops, now that we've de-registered a user
+        await self.calculate_cooldown()
 
     @league.command(name="summoner")
     @commands.guild_only()
