@@ -290,22 +290,21 @@ class LeagueCog(
             msg=f"Announcement channel set to #{alert_channel_name}",
         )
         await channel_msg.edit(content=ctx.author.mention, embed=channel_embed)
-
         return
 
     @league.command(name="clear-data")
     async def clear_data(self, ctx: commands.Context):
         """Removes all data from all guilds for the user"""
         guilds = await self.config.all_guilds()
-        for guildId in guilds:
-            guild = await self.bot.fetch_guild(guildId)
+
+        for guild_id in guilds:
+            guild = await self.bot.fetch_guild(guild_id)
             guild_members = await self.config.all_members(guild=guild)
 
-            log.info(f"CLEAR-DATA guild_members = {guild_members}")
-            log.info(f"ctx.author.id = {ctx.author.id}")
+            if ctx.author.id in guild_members.keys():
+                await self.config.member_from_ids(guild_id, ctx.author.id).clear()
 
-            # TODO use config.clear_raw()
-            # docs here: https://docs.discord.red/en/stable/framework_config.html?highlight=group.clear()#redbot.core.config.Group.clear_raw
+        await ctx.send(f"Data cleared for `{ctx.author}`")
 
     @league.command(name="summoner")
     @commands.guild_only()
@@ -408,7 +407,7 @@ class LeagueCog(
                         f"`{ctx.clean_prefix}league toggle-polling`"
                     ),
                 )
-                await ctx.send(content=ctx.authorm.mention, embed=invalid_toggle_embed)
+                await ctx.send(content=ctx.author.mention, embed=invalid_toggle_embed)
                 return
         else:
             # get the current state of poll_user_games, and set the opposite
