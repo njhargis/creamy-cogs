@@ -205,26 +205,29 @@ class Blitzcrank(MixInMeta):
                 log.debug("Looping members.")
                 for key, user_data in registered_users.items():
                     member = await self.bot.get_or_fetch_member(guild, key)
-                    basePath, headers = await self.get_riot_url(user_data["region"])
-                    if not basePath == "block":
-                        url = f"{basePath}spectator/v4/active-games/by-summoner/{user_data['summoner_id']}"
-                        async with self._session.get(url, headers=headers) as req:
-                            try:
-                                game_data = await req.json()
-                            except aiohttp.ContentTypeError:
-                                game_data = {}
-                            if req.status == 200:
-                                await self.user_in_game(member, user_data, game_data, channel)
-                            elif req.status == 404:
-                                await self.user_is_not_in_game(member, user_data, channel)
-                            elif req.status == 401 or req.status == 403:
-                                await self.token_expired_or_missing()
-                            else:
-                                log.warning = (
-                                    "Riot API request failed with status code {statusCode}"
-                                ).format(statusCode=req.status)
-                    else:
-                        await self.token_expired_or_missing()
+                    user = await self.bot.get_or_fetch_user(member.id)
+                    poll_user = await self.config.user(user).poll_user_games()
+                    if poll_user:
+                        basePath, headers = await self.get_riot_url(user_data["region"])
+                        if not basePath == "block":
+                            url = f"{basePath}spectator/v4/active-games/by-summoner/{user_data['summoner_id']}"
+                            async with self._session.get(url, headers=headers) as req:
+                                try:
+                                    game_data = await req.json()
+                                except aiohttp.ContentTypeError:
+                                    game_data = {}
+                                if req.status == 200:
+                                    await self.user_in_game(member, user_data, game_data, channel)
+                                elif req.status == 404:
+                                    await self.user_is_not_in_game(member, user_data, channel)
+                                elif req.status == 401 or req.status == 403:
+                                    await self.token_expired_or_missing()
+                                else:
+                                    log.warning = (
+                                        "Riot API request failed with status code {statusCode}"
+                                    ).format(statusCode=req.status)
+                        else:
+                            await self.token_expired_or_missing()
 
     async def user_in_game(self, member: discord.Member, user_data, game_data, channel):
         log.debug("User is in an active game")
